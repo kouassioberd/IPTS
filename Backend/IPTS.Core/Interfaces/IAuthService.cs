@@ -10,9 +10,9 @@ namespace IPTS.Core.Interfaces
     public interface IAuthService
     {
         Task<AuthResponse?> LoginAsync(LoginRequest request);
-        Task<AuthResponse?> RegisterAsync(RegisterRequest request, Guid hospitalId);
+        Task<AuthResponse?> RegisterAsync(RegisterRequest request);
         Task<AuthResponse?> RefreshAsync(RefreshTokenRequest request);
-        Task RevokeAsync(string refreshToken);
+        Task RevokeRefreshTokenAsync(string refreshToken);
     }
 
 }

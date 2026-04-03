@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ namespace IPTS.Core.Interfaces
     {
         string GenerateAccessToken(ApplicationUser user, IList<string> roles);
         string GenerateRefreshToken();
-        System.Security.Claims.ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
+        ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
     }
 
 }

@@ -4,6 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	<NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IPTS.Core\IPTS.Core.csproj" />
-    <ProjectReference Include="..\IPTS.Application\IPTS.Application.csproj" />
     <ProjectReference Include="..\IPTS.Infrastructure\IPTS.Infrastructure.csproj" />
   </ItemGroup>
 

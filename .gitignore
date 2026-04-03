@@ -8,7 +8,6 @@
 
 # ── SECRETS (CRITICAL — never push these) ──────────────────
 **/appsettings.json
-**/appsettings.*.json
 **/*.pfx
 **/*.p12
 .env

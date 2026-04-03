@@ -12,11 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IPTS.Core\IPTS.Core.csproj" />
-    <ProjectReference Include="..\IPTS.Application\IPTS.Application.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Seeders\" />
   </ItemGroup>
 
   <PropertyGroup>

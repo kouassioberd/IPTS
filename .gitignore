@@ -1,0 +1,35 @@
+# ── .NET / ASP.NET Core ─────────────────────────────────────
+**/bin/
+**/obj/
+**/out/
+*.user
+*.suo
+.vs/
+
+# ── SECRETS (CRITICAL — never push these) ──────────────────
+**/appsettings.json
+**/*.pfx
+**/*.p12
+.env
+.env.*
+secrets.json
+
+# ── Node / React ────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+*.local
+
+# ── Database ────────────────────────────────────────────────
+*.db
+*.sqlite
+
+# ── OS files ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ─────────────────────────────────────────────────────
+.idea/
+*.swp
+*.sln.DotSettings.user

@@ -66,6 +66,10 @@ builder.Services.AddAuthorization(options =>
 // ── SERVICES ──────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IHospitalService, HospitalService>();
+builder.Services.AddScoped<IWardService, WardService>();
+builder.Services.AddScoped<IBedService, BedService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
 
 
 // ── CORS ──────────────────────────────────────────────────────────

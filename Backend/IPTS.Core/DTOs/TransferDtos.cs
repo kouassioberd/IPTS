@@ -89,6 +89,7 @@ namespace IPTS.Core.DTOs
     );
 
     public record NotifyHospitalsRequest(
+        Guid BroadcastId,
         List<Guid> HospitalIds
     );
 

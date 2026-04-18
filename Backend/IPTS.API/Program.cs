@@ -70,6 +70,9 @@ builder.Services.AddScoped<IHospitalService, HospitalService>();
 builder.Services.AddScoped<IWardService, WardService>();
 builder.Services.AddScoped<IBedService, BedService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddScoped<IDistanceService, DistanceService>();
+builder.Services.AddScoped<IMatchingEngine, MatchingEngine>();
+builder.Services.AddScoped<IBroadcastService, BroadcastService>();
 
 
 // ── CORS ──────────────────────────────────────────────────────────

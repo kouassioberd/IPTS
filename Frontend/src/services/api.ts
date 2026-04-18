@@ -110,6 +110,58 @@ export const staffApi = {
         apiFetch(`/Staff/${id}/change-password`, { method: "PATCH", body: JSON.stringify(data) }),
 };
 
+
+// ── TRANSFERS ─────────────────────────────────────────────────────
+
+export const transfersApi = {
+    // Phase 1: create anonymous broadcast
+    createBroadcast: (data: CreateBroadcastRequest) =>
+        apiFetch<BroadcastDto>("/Transfers/broadcast", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    // Phase 2: ranked hospitals
+    getMatches: (broadcastId: string) =>
+        apiFetch<MatchingResultDto>(`/Transfers/broadcast/${broadcastId}/matches`),
+
+    // notify selected hospitals
+    notifyHospitals: (data: NotifyHospitalsRequest) =>
+        apiFetch<void>("/Transfers/broadcast/notify", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    // full broadcast with responses (waiting room)
+    getById: (id: string) =>
+        apiFetch<BroadcastDto>(`/Transfers/broadcast/${id}`),
+
+    // sending doctor list
+    getMyBroadcasts: () =>
+        apiFetch<BroadcastSummaryDto[]>("/Transfers/my-broadcasts"),
+
+    // receiving doctor anonymous requests
+    getIncoming: () =>
+        apiFetch<BroadcastSummaryDto[]>("/Transfers/incoming"),
+
+    // accept or decline
+    respond: (broadcastId: string, data: RespondToBroadcastRequest) =>
+        apiFetch<HospitalResponseDto>(`/Transfers/broadcast/${broadcastId}/respond`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+};
+
+// live form preview (no broadcast created)
+export const matchingApi = {
+    preview: (data: CreateBroadcastRequest) =>
+        apiFetch<MatchingResultDto>("/Matching/preview", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+};
+
+
 // ══════════════════════════════════════════════════════════════════
 // TYPES
 // ══════════════════════════════════════════════════════════════════
@@ -248,3 +300,120 @@ export interface ChangePasswordRequest {
     currentPassword: string;
     newPassword: string;
 }
+
+
+// ── TRANSFER TYPES ────────────────────────────────────────────────
+// Enums as numbers — matching C# enum order
+// UrgencyLevel:    0=Stable, 1=Urgent, 2=Critical
+// BroadcastStatus: 0=Active, 1=Matched, 2=Expired, 3=Cancelled
+// ResponseType:    0=Pending, 1=Accepted, 2=Declined, 3=NoResponse
+
+export interface CreateBroadcastRequest {
+    bedTypeRequired: string;
+    equipmentNeeded: string;
+    insuranceType: string;
+    maxDistanceMiles: number;
+    urgency: number; // 0=Stable, 1=Urgent, 2=Critical
+}
+
+// Matches BroadcastDto
+export interface BroadcastDto {
+    id: string;
+    sendingHospitalId: string;
+    sendingHospitalName: string;
+    bedTypeRequired: string;
+    equipmentNeeded: string;
+    insuranceType: string;
+    maxDistanceMiles: number;
+    urgency: number;          // UrgencyLevel enum
+    status: number;           // BroadcastStatus enum
+    createdAt: string;
+    totalResponses: number;
+    acceptedResponses: number;
+    declinedResponses: number;
+    responses: HospitalResponseDto[];
+}
+
+// Matches BroadcastSummaryDto
+export interface BroadcastSummaryDto {
+    id: string;
+    sendingHospitalName: string;
+    bedTypeRequired: string;
+    equipmentNeeded: string;
+    urgency: number;          // UrgencyLevel enum
+    status: number;           // BroadcastStatus enum
+    createdAt: string;
+    totalResponses: number;
+    acceptedResponses: number;
+}
+
+// Matches HospitalMatchDto
+export interface HospitalMatchDto {
+    hospitalId: string;
+    hospitalName: string;
+    address: string;
+    distanceMiles: number;
+    availableBeds: number;
+    hasRequiredEquipment: boolean;
+    acceptsInsurance: boolean;
+    score: number;
+    distanceScore: number;
+    bedScore: number;
+    responseRateScore: number;
+    avgAcceptTimeScore: number;  // field name in C# is AvgAcceptTimeScore
+    avgResponseTimeMinutes: number;
+    acceptanceRate: number;
+}
+
+// Matches MatchingResultDto
+export interface MatchingResultDto {
+    broadcastId: string;
+    matches: HospitalMatchDto[];
+    totalHospitalsChecked: number;
+    totalFiltered: number;
+    generatedAt: string;
+}
+
+// Matches HospitalResponseDto
+export interface HospitalResponseDto {
+    id: string;
+    broadcastId: string;
+    receivingHospitalId: string;
+    receivingHospitalName: string;
+    response: number;         // ResponseType enum: 0=Pending,1=Accepted,2=Declined,3=NoResponse
+    declineReason: string | null;
+    respondedAt: string | null;
+}
+
+// Matches RespondToBroadcastRequest
+export interface RespondToBroadcastRequest {
+    response: number;         // ResponseType enum: 1=Accepted, 2=Declined
+    declineReason: string | null;
+}
+
+// Matches NotifyHospitalsRequest
+export interface NotifyHospitalsRequest {
+    broadcastId: string;
+    hospitalIds: string[];
+}
+
+// ── DISPLAY HELPERS ───────────────────────────────────────────────
+
+export const URGENCY_LABELS: Record<number, string> = {
+    0: "Stable", 1: "Urgent", 2: "Critical",
+};
+export const URGENCY_COLORS: Record<number, string> = {
+    0: "#00D68F", 1: "#FF9A3C", 2: "#FF4D6A",
+};
+export const STATUS_LABELS: Record<number, string> = {
+    0: "Active", 1: "Matched", 2: "Expired", 3: "Cancelled",
+};
+export const STATUS_COLORS: Record<number, string> = {
+    0: "#FF9A3C", 1: "#00D68F", 2: "#8BA3C7", 3: "#8BA3C7",
+};
+export const RESPONSE_LABELS: Record<number, string> = {
+    0: "Pending", 1: "Accepted", 2: "Declined", 3: "No Response",
+};
+export const RESPONSE_COLORS: Record<number, string> = {
+    0: "#FF9A3C", 1: "#00D68F", 2: "#FF4D6A", 3: "#8BA3C7",
+};

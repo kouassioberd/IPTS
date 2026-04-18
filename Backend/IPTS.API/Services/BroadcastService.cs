@@ -67,7 +67,24 @@ namespace IPTS.API.Services
 
         // ── GET MATCHES (Phase 2) ─────────────────────────────────────
         public async Task<MatchingResultDto> GetMatchesAsync(Guid broadcastId, Guid sendingHospitalId)
-            => await _engine.FindMatchesAsync(broadcastId, sendingHospitalId);
+        {
+            var broadcast = await _db.AnonymousTransferNeeds
+         .FirstOrDefaultAsync(b => b.Id == broadcastId);
+
+            if (broadcast == null)
+                throw new InvalidOperationException("Broadcast not found.");
+
+            // Map entity → request DTO
+            var request = new CreateBroadcastRequest(
+                BedTypeRequired: broadcast.BedTypeRequired,
+                EquipmentNeeded: broadcast.EquipmentNeeded,
+                InsuranceType: broadcast.InsuranceType,
+                MaxDistanceMiles: broadcast.MaxDistanceMiles,
+                Urgency: broadcast.Urgency
+            );
+
+            return await _engine.FindMatchesAsync(request, sendingHospitalId);
+        }
 
         // ── NOTIFY HOSPITALS ──────────────────────────────────────────
         // Creates a Pending response row per selected hospital

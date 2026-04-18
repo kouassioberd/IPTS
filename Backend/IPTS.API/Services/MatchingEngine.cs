@@ -31,12 +31,8 @@ namespace IPTS.API.Services
             _distanceService = distanceService;
         }
 
-        public async Task<MatchingResultDto> FindMatchesAsync(Guid broadcastId, Guid sendingHospitalId)
+        public async Task<MatchingResultDto> FindMatchesAsync(CreateBroadcastRequest request, Guid sendingHospitalId)
         {
-            var broadcast = await _db.AnonymousTransferNeeds
-                .FirstOrDefaultAsync(b => b.Id == broadcastId)
-                ?? throw new InvalidOperationException("Broadcast not found.");
-
             var sendingHospital = await _db.Hospitals
                 .FirstOrDefaultAsync(h => h.Id == sendingHospitalId)
                 ?? throw new InvalidOperationException("Sending hospital not found.");
@@ -56,21 +52,21 @@ namespace IPTS.API.Services
             {
                 // Must have available bed of required type
                 bool hasBed = h.Wards.Any(w =>
-                    w.Type.ToString().Equals(broadcast.BedTypeRequired, StringComparison.OrdinalIgnoreCase) &&
+                    w.Type.ToString().Equals(request.BedTypeRequired, StringComparison.OrdinalIgnoreCase) &&
                     w.Beds.Any(b => b.Status == BedStatus.Available));
 
                 // Must be within distance
                 bool withinRange = _distanceService.IsWithinRange(
                     sendingHospital.Latitude, sendingHospital.Longitude,
                     h.Latitude, h.Longitude,
-                    broadcast.MaxDistanceMiles);
+                    request.MaxDistanceMiles);
 
                 // Must accept insurance (skip check if insurance not specified)
-                bool acceptsInsurance = string.IsNullOrWhiteSpace(broadcast.InsuranceType) ||
-                    broadcast.InsuranceType.Equals("None", StringComparison.OrdinalIgnoreCase) ||
+                bool acceptsInsurance = string.IsNullOrWhiteSpace(request.InsuranceType) ||
+                    request.InsuranceType.Equals("None", StringComparison.OrdinalIgnoreCase) ||
                     h.AcceptedInsuranceTypes
                      .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                     .Any(i => i.Trim().Equals(broadcast.InsuranceType, StringComparison.OrdinalIgnoreCase));
+                     .Any(i => i.Trim().Equals(request.InsuranceType.Trim(), StringComparison.OrdinalIgnoreCase));
 
                 return hasBed && withinRange && acceptsInsurance;
             }).ToList();
@@ -81,20 +77,20 @@ namespace IPTS.API.Services
                 var stats = allStats.FirstOrDefault(s => s.HospitalId == h.Id);
 
                 int availableBeds = h.Wards
-                    .Where(w => w.Type.ToString().Equals(broadcast.BedTypeRequired, StringComparison.OrdinalIgnoreCase))
+                    .Where(w => w.Type.ToString().Equals(request.BedTypeRequired, StringComparison.OrdinalIgnoreCase))
                     .SelectMany(w => w.Beds)
                     .Count(b => b.Status == BedStatus.Available);
 
                 bool hasEquipment =
-                    string.IsNullOrWhiteSpace(broadcast.EquipmentNeeded) ||
-                    broadcast.EquipmentNeeded.Equals("None", StringComparison.OrdinalIgnoreCase);
+                    string.IsNullOrWhiteSpace(request.EquipmentNeeded) ||
+                    request.EquipmentNeeded.Equals("None", StringComparison.OrdinalIgnoreCase);
 
                 double distanceMiles = _distanceService.GetDistanceMiles(
                     sendingHospital.Latitude, sendingHospital.Longitude,
                     h.Latitude, h.Longitude);
 
                 // Distance score: 0 miles = 30pts, maxDistance miles = 0pts
-                int distanceScore = (int)(30.0 * (1.0 - distanceMiles / broadcast.MaxDistanceMiles));
+                int distanceScore = (int)(30.0 * (1.0 - distanceMiles / request.MaxDistanceMiles));
                 distanceScore = Math.Clamp(distanceScore, 0, 30);
 
                 // Bed score: each available bed = 10pts, capped at 30
@@ -132,7 +128,7 @@ namespace IPTS.API.Services
             .ToList();
 
             return new MatchingResultDto(
-                BroadcastId: broadcastId,
+                BroadcastId: Guid.Empty,
                 Matches: matches,
                 TotalHospitalsChecked: totalChecked,
                 TotalFiltered: filtered.Count,

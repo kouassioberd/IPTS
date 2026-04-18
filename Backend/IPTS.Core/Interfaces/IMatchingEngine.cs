@@ -9,6 +9,6 @@ namespace IPTS.Core.Interfaces
 {
     public interface IMatchingEngine
     {
-        Task<MatchingResultDto> FindMatchesAsync(Guid broadcastId, Guid sendingHospitalId);
+      Task<MatchingResultDto> FindMatchesAsync(CreateBroadcastRequest request, Guid sendingHospitalId);   
     }
 }

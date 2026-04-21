@@ -73,6 +73,7 @@ builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IDistanceService, DistanceService>();
 builder.Services.AddScoped<IMatchingEngine, MatchingEngine>();
 builder.Services.AddScoped<IBroadcastService, BroadcastService>();
+builder.Services.AddScoped<ITransferService, TransferService>();
 
 
 // ── CORS ──────────────────────────────────────────────────────────

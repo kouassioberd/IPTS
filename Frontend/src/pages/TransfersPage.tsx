@@ -3,14 +3,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     transfersApi,
+    transferRequestsApi,
     clearAuth,
     getUser,
     URGENCY_LABELS,
     URGENCY_COLORS,
     STATUS_LABELS,
     STATUS_COLORS,
+    TRANSFER_STATUS_LABELS,
+    TRANSFER_STATUS_COLORS,
 } from "../services/api";
-import type { BroadcastSummaryDto, RespondToBroadcastRequest } from "../services/api";
+import type {
+    BroadcastSummaryDto,
+    RespondToBroadcastRequest,
+    TransferRequestDto,
+} from "../services/api";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -21,10 +28,11 @@ function getErrorMessage(error: unknown): string {
 export default function TransfersPage() {
     const navigate = useNavigate();
     const user = getUser();
-
-    const [activeTab, setActiveTab] = useState<"sent" | "incoming">("sent");
+    // ── STATE ────────────────────────────────────────────────────
+    const [activeTab, setActiveTab] = useState<"sent" | "incoming" | "transfers">("sent");
     const [broadcasts, setBroadcasts] = useState<BroadcastSummaryDto[]>([]);
     const [incoming, setIncoming] = useState<BroadcastSummaryDto[]>([]);
+    const [myTransfers, setMyTransfers] = useState<TransferRequestDto[]>([]);
     const [responding, setResponding] = useState<string | null>(null);
     const [declineReason, setDeclineReason] = useState("");
     const [showDeclineModal, setShowDeclineModal] = useState<string | null>(null);
@@ -36,17 +44,20 @@ export default function TransfersPage() {
         loadAll();
     }, []);
 
+    // ── LOAD ALL DATA ────────────────────────────────────────────
     const loadAll = async () => {
         setLoading(true);
         setError("");
         try {
             // Both endpoints return BroadcastSummaryDto[]
-            const [sent, inc] = await Promise.all([
+            const [sent, inc, transfers] = await Promise.all([
                 transfersApi.getMyBroadcasts(),   // GET /api/Transfers/my-broadcasts
                 transfersApi.getIncoming(),        // GET /api/Transfers/incoming
+                transferRequestsApi.getMyTransfers(),   // GET /api/transferrequests/my-transferts
             ]);
             setBroadcasts(sent);
             setIncoming(inc);
+            setMyTransfers(transfers);
         } catch (e: unknown) {
             setError(getErrorMessage(e));
         } finally {
@@ -54,6 +65,7 @@ export default function TransfersPage() {
         }
     };
 
+    // ── ACCEPT ────────────────────────────────────────────────────
     const handleAccept = async (broadcastId: string) => {
         setResponding(broadcastId);
         try {
@@ -63,6 +75,9 @@ export default function TransfersPage() {
             };
             await transfersApi.respond(broadcastId, body);
             await loadAll();
+            // Auto-switch to Active Transfers tab so the receiving doctor
+            // immediately sees where to go next for patient data reveal
+            setActiveTab("transfers");
         } catch (e: unknown) {
             setError(getErrorMessage(e));
         } finally {
@@ -70,6 +85,7 @@ export default function TransfersPage() {
         }
     };
 
+    // ── DECLINE ───────────────────────────────────────────────────
     const handleDecline = async (broadcastId: string) => {
         setResponding(broadcastId);
         try {
@@ -88,6 +104,7 @@ export default function TransfersPage() {
         }
     };
 
+    // ── RENDER ────────────────────────────────────────────────────
     return (
         <div style={{ minHeight: "100vh", background: "#0A1628", fontFamily: "'Inter', sans-serif" }}>
 
@@ -127,7 +144,7 @@ export default function TransfersPage() {
                             Transfer Requests
                         </h1>
                         <p style={{ color: "#8BA3C7", margin: "4px 0 0", fontSize: 14 }}>
-                            Manage outgoing broadcasts and respond to incoming requests
+                            Manage outgoing broadcasts, respond to incoming requests and confirm active transfers
                         </p>
                     </div>
                     <button
@@ -154,8 +171,18 @@ export default function TransfersPage() {
                     borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 24,
                 }}>
                     {[
-                        { key: "sent" as const, label: `📤 My Broadcasts (${broadcasts.length})` },
-                        { key: "incoming" as const, label: `📥 Incoming Requests${incoming.length > 0 ? ` (${incoming.length})` : ""}` },
+                        {
+                            key: "sent" as const,
+                            label: `📤 My Broadcasts (${broadcasts.length})`
+                        },
+                        {
+                            key: "incoming" as const,
+                            label: `📥 Incoming Requests${incoming.length > 0 ? ` (${incoming.length})` : ""}`
+                        },
+                        {
+                            key: "transfers" as const,
+                            label: `🏥 Active Transfers${myTransfers.length > 0 ? ` (${myTransfers.length})` : ""}${myTransfers.some(t => t.patientDataSubmitted && !t.patientDataRevealed) ? " 🔔" : ""}`,
+                        },
                     ].map(tab => (
                         <button
                             key={tab.key}
@@ -165,6 +192,7 @@ export default function TransfersPage() {
                                 padding: "10px 20px", fontSize: 14, fontWeight: 500,
                                 color: activeTab === tab.key ? "#00C2D4" : "#8BA3C7",
                                 borderBottom: activeTab === tab.key ? "2px solid #00C2D4" : "2px solid transparent",
+                                whiteSpace: "nowrap",
                             }}
                         >{tab.label}</button>
                     ))}
@@ -174,7 +202,9 @@ export default function TransfersPage() {
                     <div style={{ textAlign: "center", padding: 60, color: "#8BA3C7" }}>Loading...</div>
                 ) : activeTab === "sent" ? (
 
-                    // ── SENT BROADCASTS ──────────────────────────────────
+                        // ══════════════════════════════════════════════════════
+                        // TAB 1 — SENT BROADCASTS
+                        // ══════════════════════════════════════════════════════
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {broadcasts.length === 0 ? (
                             <div style={{
@@ -246,9 +276,11 @@ export default function TransfersPage() {
                         ))}
                     </div>
 
-                ) : (
+                    ) : activeTab === "incoming" ? (
 
-                    // ── INCOMING REQUESTS ─────────────────────────────────
+                            // ══════════════════════════════════════════════════════
+                            // TAB 2 — INCOMING REQUESTS
+                            // ══════════════════════════════════════════════════════
                     // GetIncomingRequestsAsync returns BroadcastSummaryDto[]
                     // so we only show the anonymous summary fields
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -340,6 +372,131 @@ export default function TransfersPage() {
                             </div>
                         ))}
                     </div>
+                ) : (
+                   // ══════════════════════════════════════════════════════
+                   // TAB 3 — ACTIVE TRANSFERS (Phase 3)
+                   // Both sending and receiving doctors see confirmed
+                   // TransferRequest records here. The receiving doctor
+                   // uses this tab to find the patient data reveal button.
+                   // ══════════════════════════════════════════════════════
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                       {myTransfers.length === 0 ? (
+                          <div style={{
+                              textAlign: "center", padding: 60, background: "#112240",
+                              borderRadius: 14, border: "1px dashed rgba(255,255,255,0.1)",
+                          }}>
+                              <div style={{ fontSize: 48, marginBottom: 12 }}>🏥</div>
+                              <p style={{ color: "#8BA3C7", fontSize: 15, margin: 0 }}>
+                              No active transfers yet. They appear here after a hospital accepts
+                               and the sending doctor submits patient data.
+                              </p>
+                          </div>
+                       ) : myTransfers.map(t => (
+                          <div
+                            key={t.id}
+                            onClick={() => navigate(`/transfers/confirm/${t.id}`)}
+                            style={{
+                              background: "#112240",
+                              border: t.patientDataSubmitted && !t.patientDataRevealed
+                                 ? "1px solid rgba(0,194,212,0.45)"
+                                 : "1px solid rgba(255,255,255,0.07)",
+                              borderRadius: 14, padding: "20px 24px",
+                              cursor: "pointer", transition: "border 0.2s",
+                            }}
+                            onMouseEnter={e =>
+                                (e.currentTarget.style.border = "1px solid rgba(0,194,212,0.6)")}
+                            onMouseLeave={e =>
+                                (e.currentTarget.style.border =
+                                    t.patientDataSubmitted && !t.patientDataRevealed
+                                        ? "1px solid rgba(0,194,212,0.45)"
+                                        : "1px solid rgba(255,255,255,0.07)")}
+                            >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+
+                               {/* Left — transfer info */}
+                               <div>
+                                 <div style={{ color: "#F0F6FF", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                                     Transfer #{t.id.substring(0, 8).toUpperCase()}
+                                 </div>
+                                 <div style={{ color: "#8BA3C7", fontSize: 13, marginBottom: 3 }}>
+                                     From: <span style={{ color: "#F0F6FF" }}>{t.sendingHospitalName}</span>
+                                 </div>
+                                 <div style={{ color: "#8BA3C7", fontSize: 13 }}>
+                                     To: <span style={{ color: "#F0F6FF" }}>{t.receivingHospitalName}</span>
+                                 </div>
+                               </div>
+
+                               {/* Right — status + action badges */}
+                               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+
+                                   {/* Transfer status */}
+                                   <span style={{
+                                      background: `${TRANSFER_STATUS_COLORS[t.status]}18`,
+                                      color: TRANSFER_STATUS_COLORS[t.status],
+                                      border: `1px solid ${TRANSFER_STATUS_COLORS[t.status]}44`,
+                                      padding: "4px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                                   }}>
+                                      {TRANSFER_STATUS_LABELS[t.status]}
+                                   </span>
+
+                                   {/* Patient data ready to reveal — pulsing badge */}
+                                   {t.patientDataSubmitted && !t.patientDataRevealed && (
+                                      <span style={{
+                                         background: "rgba(0,194,212,0.14)",
+                                         color: "#00C2D4",
+                                         border: "1px solid rgba(0,194,212,0.35)",
+                                         padding: "4px 12px", borderRadius: 8,
+                                         fontSize: 12, fontWeight: 700,
+                                         animation: "pulse-badge 2s infinite",
+                                      }}>
+                                         🔓 Patient Data Ready — Click to Reveal
+                                      </span>
+                                   )}
+
+                                   {/* Patient data already revealed */}
+                                   {t.patientDataRevealed && (
+                                      <span style={{
+                                          background: "rgba(0,214,143,0.12)",
+                                          color: "#00D68F",
+                                          border: "1px solid rgba(0,214,143,0.3)",
+                                          padding: "4px 12px", borderRadius: 8,
+                                          fontSize: 12, fontWeight: 600,
+                                      }}>
+                                         ✓ Patient Data Revealed
+                                      </span>
+                                   )}
+
+                                   {/* Patient data not yet submitted */}
+                                   {!t.patientDataSubmitted && (
+                                      <span style={{
+                                          background: "rgba(255,154,60,0.12)",
+                                          color: "#FF9A3C",
+                                          border: "1px solid rgba(255,154,60,0.3)",
+                                          padding: "4px 12px", borderRadius: 8,
+                                          fontSize: 12, fontWeight: 600,
+                                      }}>
+                                         ⏳ Awaiting Patient Data
+                                      </span>
+                                   )}
+                               </div>
+                            </div>
+
+                              {/* Footer */}
+                              <div style={{
+                                  display: "flex", justifyContent: "space-between",
+                                  alignItems: "center", marginTop: 14,
+                                  padding: "12px 0 0", borderTop: "1px solid rgba(255,255,255,0.06)",
+                              }}>
+                                 <span style={{ color: "#8BA3C7", fontSize: 13 }}>
+                                     Confirmed: {new Date(t.confirmedAt).toLocaleString()}
+                                 </span>
+                                 <span style={{ color: "#00C2D4", fontSize: 13 }}>
+                                     Click to open →
+                                 </span>
+                              </div>
+                          </div>
+                       ))}
+                    </div>              
                 )}
             </div>
 
@@ -396,6 +553,14 @@ export default function TransfersPage() {
                     </div>
                 </div>
             )}
+
+            {/* Pulse animation for "Patient Data Ready" badge */}
+            <style>{`
+                @keyframes pulse-badge {
+                    0%, 100% { opacity: 1; }
+                    50%       { opacity: 0.55; }
+                }
+            `}</style>
         </div>
     );
 }

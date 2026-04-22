@@ -630,13 +630,13 @@ export default function NewTransferPage() {
                                     ✅ A hospital has accepted! Proceed to confirm the transfer and reveal patient data.
                                 </p>
                                 <button
-                                    onClick={() => navigate("/transfers")}
+                                    onClick={() => navigate(`/transfers/submit?broadcastId=${broadcast.id}`)}
                                     style={{
                                         background: "linear-gradient(135deg,#1E5FBF,#00C2D4)",
                                         border: "none", borderRadius: 8, padding: "10px 20px",
                                         color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer",
                                     }}
-                                >Continue to Transfer Confirmation →</button>
+                                >🔒 Enter Patient Data (Phase 3)</button>
                             </div>
                         )}
                     </div>

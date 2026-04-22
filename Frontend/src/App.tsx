@@ -4,6 +4,8 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import TransfersPage from "./pages/TransfersPage";
 import NewTransferPage from "./pages/NewTransferPage";
+import SubmitPatientDataPage from "./pages/SubmitPatientDataPage";
+import TransferConfirmPage from "./pages/TransferConfirmPage";
 import { getToken, getUser } from "./services/api";
 
 function ProtectedRoute({ children, allowedRoles }: {
@@ -56,6 +58,20 @@ export default function App() {
                         </ProtectedRoute>
                     }
                 />
+
+                {/* Phase 3 — sending doctor submits patient data */}
+                <Route path="/transfers/submit" element={
+                    <ProtectedRoute allowedRoles={["Doctor"]}>
+                        <SubmitPatientDataPage />
+                    </ProtectedRoute>
+                } />
+
+                {/* Phase 3 — transfer confirmation and patient reveal */}
+                <Route path="/transfers/confirm/:id" element={
+                    <ProtectedRoute allowedRoles={["Doctor"]}>
+                        <TransferConfirmPage />
+                    </ProtectedRoute>
+                } />
 
                 {/* Default redirects */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />

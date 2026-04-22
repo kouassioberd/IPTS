@@ -162,6 +162,37 @@ export const matchingApi = {
 };
 
 
+// ── PHASE 3 TRANSFER REQUESTS API ────────────────────────
+export const transferRequestsApi = {
+
+    // Sending doctor submits patient data
+    // POST /api/transferrequests/submit-patient-data
+    submitPatientData: (data: SubmitPatientDataRequest) =>
+        apiFetch<TransferRequestDto>("/transferrequests/submit-patient-data", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    // Receiving doctor gets decrypted patient data
+    // GET /api/transferrequests/{id}/patient-data
+    getPatientData: (id: string) =>
+        apiFetch<DecryptedPatientDataDto>(`/transferrequests/${id}/patient-data`),
+
+    // Get transfer request by ID
+    getById: (id: string) =>
+        apiFetch<TransferRequestDto>(`/transferrequests/${id}`),
+
+    // Get all transfers for my hospital
+    getMyTransfers: () =>
+        apiFetch<TransferRequestDto[]>("/transferrequests/my-transfers"),
+
+    // Get audit log for a transfer
+    getAuditLog: (id: string) =>
+        apiFetch<AuditLogDto[]>(`/transferrequests/${id}/audit-log`),
+};
+
+
+
 // ══════════════════════════════════════════════════════════════════
 // TYPES
 // ══════════════════════════════════════════════════════════════════
@@ -417,3 +448,63 @@ export const RESPONSE_LABELS: Record<number, string> = {
 export const RESPONSE_COLORS: Record<number, string> = {
     0: "#FF9A3C", 1: "#00D68F", 2: "#FF4D6A", 3: "#8BA3C7",
 };
+
+// ── PHASE 3 TYPES ─────────────────────────────────────────
+
+export interface SubmitPatientDataRequest {
+    broadcastId: string;
+    patientFullName: string;
+    dateOfBirth: string;  // "YYYY-MM-DD"
+    diagnosis: string;
+    allergies: string;
+    currentMedications: string;
+    additionalNotes: string;
+    familyContactName: string;
+    familyContactPhone: string;
+}
+
+// TransferStatus enum: 0=Confirmed, 1=AmbulanceAssigned, 2=EnRoute,
+//                      3=PatientOnBoard, 4=InTransit, 5=Delivered, 6=Cancelled
+export const TRANSFER_STATUS_LABELS: Record<number, string> = {
+    0: "Confirmed", 1: "Ambulance Assigned", 2: "En Route",
+    3: "Patient On Board", 4: "In Transit", 5: "Delivered", 6: "Cancelled",
+};
+export const TRANSFER_STATUS_COLORS: Record<number, string> = {
+    0: "#00C2D4", 1: "#FF9A3C", 2: "#FF9A3C",
+    3: "#FF4D6A", 4: "#FF4D6A", 5: "#00D68F", 6: "#8BA3C7",
+};
+
+export interface TransferRequestDto {
+    id: string;
+    broadcastId: string;
+    sendingHospitalName: string;
+    receivingHospitalId: string;
+    receivingHospitalName: string;
+    status: number;
+    confirmedAt: string;
+    patientDataSubmitted: boolean;
+    patientDataRevealed: boolean;
+    deliveredAt: string | null;
+}
+
+export interface DecryptedPatientDataDto {
+    transferRequestId: string;
+    patientFullName: string;
+    dateOfBirth: string;
+    diagnosis: string;
+    allergies: string;
+    currentMedications: string;
+    additionalNotes: string;
+    familyContactName: string;
+    familyContactPhone: string;
+    revealedAt: string;
+}
+
+export interface AuditLogDto {
+    id: string;
+    action: string;
+    performedByRole: string;
+    timestamp: string;
+    details: string;
+}
+

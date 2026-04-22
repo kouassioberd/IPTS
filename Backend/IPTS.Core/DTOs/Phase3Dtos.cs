@@ -30,6 +30,7 @@ namespace IPTS.Core.DTOs
         Guid Id,
         Guid BroadcastId,
         string SendingHospitalName,
+        Guid ReceivingHospitalId,
         string ReceivingHospitalName,
         TransferStatus Status,
         DateTime ConfirmedAt,

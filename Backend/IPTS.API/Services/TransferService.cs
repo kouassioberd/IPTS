@@ -253,6 +253,7 @@ namespace IPTS.API.Services
             Id: t.Id,
             BroadcastId: t.BroadcastId,
             SendingHospitalName: t.SendingHospital?.Name ?? "",
+            ReceivingHospitalId: t.ReceivingHospitalId,
             ReceivingHospitalName: t.ReceivingHospital?.Name ?? "",
             Status: t.Status,
             ConfirmedAt: t.ConfirmedAt,

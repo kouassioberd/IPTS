@@ -17,9 +17,17 @@ export default function LoginPage() {
         try {
             const data = await authApi.login(email, password);
             saveAuth(data);
-            if (data.role === "Admin") navigate("/dashboard");
-            else if (data.role === "Doctor") navigate("/transfers");
-            else navigate("/dashboard");
+            if (data.role === "Admin") {
+                navigate("/dashboard");
+            }
+            else if (data.role === "Doctor") {
+                navigate("/transfers");
+            }
+            else if (data.role === 'Dispatcher') {
+                navigate('/dispatcher');       
+            } else {
+                navigate("/dashboard");
+            }
         } catch {
             setError("Invalid email or password. Please try again.");
         } finally {

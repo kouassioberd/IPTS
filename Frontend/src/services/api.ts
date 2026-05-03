@@ -191,6 +191,35 @@ export const transferRequestsApi = {
         apiFetch<AuditLogDto[]>(`/transferrequests/${id}/audit-log`),
 };
 
+// ── DISPATCHER API ─────────────────────────────────────────
+export const dispatcherApi = {
+
+    // GET /api/dispatcher/dashboard
+    getDashboard: () =>
+        apiFetch<DispatcherDashboardDto>("/dispatcher/dashboard"),
+
+    // GET /api/dispatcher/ambulances/available
+    getAvailableAmbulances: () =>
+        apiFetch<AmbulanceDetailDto[]>("/dispatcher/ambulances/available"),
+
+    // POST /api/dispatcher/assign
+    assignAmbulance: (data: AssignAmbulanceRequest) =>
+        apiFetch<DispatcherTransferDto>("/dispatcher/assign", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    // PATCH /api/dispatcher/status
+    updateStatus: (data: UpdateTransferStatusRequest) =>
+        apiFetch<DispatcherTransferDto>("/dispatcher/status", {
+            method: "PATCH",
+            body: JSON.stringify(data),
+        }),
+
+    // GET /api/dispatcher/transfers/{id}
+    getTransfer: (id: string) =>
+        apiFetch<DispatcherTransferDto>(`/dispatcher/transfers/${id}`),
+};
 
 
 // ══════════════════════════════════════════════════════════════════
@@ -507,4 +536,57 @@ export interface AuditLogDto {
     timestamp: string;
     details: string;
 }
+
+// ── DISPATCHER TYPES ───────────────────────────────────────
+// AmbulanceStatus enum: 0=Available, 1=Assigned, 2=InTransit, 3=Maintenance
+export const AMBULANCE_STATUS_LABELS: Record<number, string> = {
+    0: "Available", 1: "Assigned", 2: "In Transit", 3: "Maintenance",
+};
+export const AMBULANCE_STATUS_COLORS: Record<number, string> = {
+    0: "#00D68F", 1: "#FF9A3C", 2: "#FF4D6A", 3: "#8BA3C7",
+};
+
+export interface AmbulanceDetailDto {
+    id: string;
+    unitNumber: string;
+    status: number;   // AmbulanceStatus enum
+    crewCount: number;
+    hospitalName: string;
+}
+
+export interface AssignAmbulanceRequest {
+    transferRequestId: string;
+    ambulanceId: string;
+}
+
+export interface UpdateTransferStatusRequest {
+    transferRequestId: string;
+    newStatus: number;   // TransferStatus enum
+    notes?: string;
+}
+
+export interface DispatcherTransferDto {
+    id: string;
+    broadcastId: string;
+    sendingHospitalName: string;
+    receivingHospitalId: string;
+    receivingHospitalName: string;
+    status: number;   // TransferStatus enum
+    confirmedAt: string;
+    deliveredAt: string | null;
+    patientDataSubmitted: boolean;
+    assignedAmbulanceId: string | null;
+    assignedAmbulanceUnit: string | null;
+    ambulanceStatus: number | null;
+}
+
+export interface DispatcherDashboardDto {
+    totalConfirmed: number;
+    totalAmbulanceAssigned: number;
+    totalEnRoute: number;
+    totalDeliveredToday: number;
+    availableAmbulances: number;
+    activeTransfers: DispatcherTransferDto[];
+}
+
 

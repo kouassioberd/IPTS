@@ -1,7 +1,7 @@
 // src/services/api.ts
 // ── Central API client — every API call goes through here ─────────
 
-const BASE_URL = "https://localhost:7056/api";
+const BASE_URL = "https://ipts-api.up.railway.app/api";
 
 // ── TOKEN HELPERS ─────────────────────────────────────────────────
 

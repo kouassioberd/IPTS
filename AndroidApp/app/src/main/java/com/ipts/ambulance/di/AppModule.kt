@@ -16,8 +16,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    // Replace 192.168.X.X with your machine's actual IP
-    private const val BASE_URL = "http://10.0.2.2:5041/"
+    // Replace 192.168.X.X with your machine's actual IP or your backend deployment url
+    private const val BASE_URL = "https://ipts-api.up.railway.app/"
 
 
     @Provides

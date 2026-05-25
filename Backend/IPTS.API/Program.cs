@@ -151,6 +151,11 @@ app.MapControllers();
 // ── SEED ROLES,DATA + USERS ON STARTUP ─────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Apply migrations
+    await db.Database.MigrateAsync();
+
     // Seed roles
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     string[] roles = ["Admin", "Doctor", "Dispatcher", "Driver", "Paramedic"];
@@ -161,7 +166,6 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Seed data + users
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     await DataSeeder.SeedAsync(db, userManager);
 }

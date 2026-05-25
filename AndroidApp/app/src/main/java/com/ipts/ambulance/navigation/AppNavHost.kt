@@ -1,0 +1,55 @@
+package com.ipts.ambulance.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.ipts.ambulance.ui.job.JobScreen
+import com.ipts.ambulance.ui.login.LoginScreen
+import com.ipts.ambulance.ui.vitals.VitalsScreen
+
+sealed class Screen(val route: String) {
+    object Login  : Screen("login")
+    object Job    : Screen("job")
+    object Vitals : Screen("vitals/{transferRequestId}") {
+        fun createRoute(id: String) = "vitals/\$id"
+    }
+}
+
+@Composable
+fun AppNavHost(navController: NavHostController) {
+    NavHost(navController,
+        startDestination = Screen.Login.route) {
+
+        composable(Screen.Login.route) {
+            LoginScreen(onLoginSuccess = {
+                navController.navigate(Screen.Job.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            })
+        }
+
+        composable(Screen.Job.route) {
+            JobScreen(onNavigateToVitals = { id ->
+                navController.navigate(
+                    Screen.Vitals.createRoute(id))
+            })
+        }
+
+        composable(
+            route     = Screen.Vitals.route,
+            arguments = listOf(navArgument("transferRequestId") {
+                type = NavType.StringType
+            })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments
+                ?.getString("transferRequestId") ?: ""
+            VitalsScreen(
+                transferRequestId = id,
+                onBack = { navController.popBackStack() }
+            )
+        }
+    }
+}

@@ -17,7 +17,8 @@ import javax.inject.Singleton
 object AppModule {
 
     // Replace 192.168.X.X with your machine's actual IP
-    private const val BASE_URL = "http://192.168.0.102:7056/api/"
+    private const val BASE_URL = "http://10.0.2.2:5041/"
+
 
     @Provides
     @Singleton

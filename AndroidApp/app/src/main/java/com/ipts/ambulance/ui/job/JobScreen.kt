@@ -114,6 +114,7 @@ fun JobScreen(
 
                 OutlinedButton(
                     onClick = {
+                        android.util.Log.d("VITALS_DEBUG", "Navigating with id = '${job.transferRequestId}'")
                         onNavigateToVitals(job.transferRequestId)
                     },
                     modifier = Modifier.fillMaxWidth(),

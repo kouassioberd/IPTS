@@ -55,6 +55,7 @@ class VitalsViewModel @Inject constructor(
                     error = "Glasgow Coma Scale must be 3–15.")
             else -> viewModelScope.launch {
                 _state.value = VitalsUiState(isLoading = true)
+                android.util.Log.d("VITALS_DEBUG", "transferRequestId = '$transferRequestId'")
                 val token = tokenManager.token.firstOrNull()
                 if (token == null) {
                     _state.value = VitalsUiState(error = "Not logged in.")

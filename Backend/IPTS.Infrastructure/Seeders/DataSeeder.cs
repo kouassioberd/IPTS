@@ -3,6 +3,7 @@ using IPTS.Core.Enums;
 using IPTS.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using BCrypt.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -244,6 +245,23 @@ namespace IPTS.Infrastructure.Seeders
                 await db.SaveChangesAsync();
                 Console.WriteLine("✅ Ambulance crews seeded.");
             }
+
+            // ── FIX CORRUPTED CREW PASSWORD HASHES ───────────────────────
+            // If crews exist but have invalid BCrypt hashes (from an earlier
+            // deploy before BCrypt was used), fix them automatically.
+            var existingCrews = await db.AmbulanceCrews.ToListAsync();
+            bool hashesFixed = false;
+            foreach (var crew in existingCrews)
+            {
+                if (!crew.PasswordHash.StartsWith("$2"))
+                {
+                    crew.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Test@1234");
+                    Console.WriteLine($"🔧 Fixed hash for {crew.Email}");
+                    hashesFixed = true;
+                }
+            }
+            if (hashesFixed)
+                await db.SaveChangesAsync();
         }
     }
 }

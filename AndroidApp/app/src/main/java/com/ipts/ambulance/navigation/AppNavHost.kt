@@ -13,8 +13,8 @@ import com.ipts.ambulance.ui.vitals.VitalsScreen
 sealed class Screen(val route: String) {
     object Login  : Screen("login")
     object Job    : Screen("job")
-    object Vitals : Screen("vitals/{transferRequestId}") {
-        fun createRoute(id: String) = "vitals/\$id"
+    object Vitals : Screen("vitals?transferRequestId={transferRequestId}") {
+        fun createRoute(id: String) = "vitals?transferRequestId=$id"
     }
 }
 
@@ -42,6 +42,7 @@ fun AppNavHost(navController: NavHostController) {
             route     = Screen.Vitals.route,
             arguments = listOf(navArgument("transferRequestId") {
                 type = NavType.StringType
+                defaultValue = ""
             })
         ) { backStackEntry ->
             val id = backStackEntry.arguments

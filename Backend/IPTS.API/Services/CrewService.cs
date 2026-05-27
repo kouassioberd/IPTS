@@ -103,6 +103,32 @@ namespace IPTS.API.Services
             );
         }
 
+        // ── UPDATE LOCATION ──────────────────────────
+        public async Task<LocationUpdateResponse> UpdateLocationAsync(
+            UpdateLocationRequest request, Guid ambulanceId)
+        {
+            // Find the ambulance belonging to this crew member
+            var ambulance = await _db.Ambulances
+                .FirstOrDefaultAsync(a => a.Id == ambulanceId)
+                ?? throw new InvalidOperationException(
+                    "Ambulance not found for this crew member.");
+
+            // Update the GPS coordinates
+            ambulance.CurrentLatitude = request.Latitude;
+            ambulance.CurrentLongitude = request.Longitude;
+            ambulance.LastLocationUpdate = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            return new LocationUpdateResponse(
+                AmbulanceId: ambulance.Id,
+                Latitude: ambulance.CurrentLatitude,
+                Longitude: ambulance.CurrentLongitude,
+                UpdatedAt: ambulance.LastLocationUpdate
+            );
+        }
+
+
         // ── JWT HELPER ────────────────────────────────────────
         private string GenerateCrewJwt(AmbulanceCrew crew)
         {

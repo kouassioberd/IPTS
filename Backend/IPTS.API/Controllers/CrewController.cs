@@ -65,6 +65,22 @@ namespace IPTS.API.Controllers
                 .SubmitVitalsAsync(request, CallerCrewId);
             return Ok(result);
         }
+
+        /// <summary>
+        /// Crew posts GPS coordinates during transport.
+        /// Called every 30 seconds by the Android app.
+        /// The family tracking page reads these coordinates.
+        /// </summary>
+        [HttpPatch("location")]
+        [Authorize(Policy = "AmbulanceCrew")]
+        public async Task<IActionResult> UpdateLocation(
+            [FromBody] UpdateLocationRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var result = await _crewService
+                .UpdateLocationAsync(request, CallerAmbulanceId);
+            return Ok(result);
+        }
     }
 
 }

@@ -57,4 +57,16 @@ namespace IPTS.Core.DTOs
         string Notes,
         DateTime RecordedAt
     );
+    public record UpdateLocationRequest(
+        double Latitude,
+        double Longitude
+    );
+
+    public record LocationUpdateResponse(
+        Guid AmbulanceId,
+        double Latitude,
+        double Longitude,
+        DateTime UpdatedAt
+    );
+
 }

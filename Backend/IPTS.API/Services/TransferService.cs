@@ -6,6 +6,7 @@ using IPTS.Core.Interfaces;
 using IPTS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Text.Json;
 
@@ -171,6 +172,7 @@ namespace IPTS.API.Services
                 .Include(t => t.PatientRecord)
                 .Include(t => t.SendingHospital)
                 .Include(t => t.ReceivingHospital)
+                .Include(t => t.TrackingToken)
                 .FirstOrDefaultAsync(t => t.Id == id);
             return t is null ? null : MapToDto(t, t.PatientRecord);
         }
@@ -183,6 +185,7 @@ namespace IPTS.API.Services
                 .Include(t => t.PatientRecord)
                 .Include(t => t.SendingHospital)
                 .Include(t => t.ReceivingHospital)
+                .Include(t => t.TrackingToken)
                 .OrderByDescending(t => t.ConfirmedAt)
                 .ToListAsync();
             return list.Select(t => MapToDto(t, t.PatientRecord)).ToList();
@@ -259,7 +262,8 @@ namespace IPTS.API.Services
             ConfirmedAt: t.ConfirmedAt,
             PatientDataSubmitted: record is not null,
             PatientDataRevealed: record?.IsRevealed ?? false,
-            DeliveredAt: t.DeliveredAt
+            DeliveredAt: t.DeliveredAt,
+            TrackingToken: t.TrackingToken?.Token
             );
    }
 }

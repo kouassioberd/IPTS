@@ -514,6 +514,7 @@ export interface TransferRequestDto {
     patientDataSubmitted: boolean;
     patientDataRevealed: boolean;
     deliveredAt: string | null;
+    trackingToken: string | null;
 }
 
 export interface DecryptedPatientDataDto {
@@ -588,5 +589,25 @@ export interface DispatcherDashboardDto {
     availableAmbulances: number;
     activeTransfers: DispatcherTransferDto[];
 }
+
+// ── FAMILY TRACKING───────────────────────
+
+export interface FamilyTrackingDto {
+    patientStatus: string;
+    sendingHospitalName: string;
+    receivingHospitalName: string;
+    receivingHospitalAddress: string;
+    ambulanceLatitude: number;
+    ambulanceLongitude: number;
+    lastLocationUpdate: string;   // ISO datetime string
+    ambulanceUnit: string;
+    isExpired: boolean;
+}
+
+export const familyApi = {
+    track: (token: string) =>
+        apiFetch<FamilyTrackingDto>(`/family/${token}`),
+};
+
 
 

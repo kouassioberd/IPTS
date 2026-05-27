@@ -22,4 +22,12 @@ interface CrewApiService {
         @Header("Authorization") token: String,
         @Body request: SubmitVitalsRequest
     ): Response<VitalsResponseDto>
+
+    //  GPS update
+    @PATCH("crew/location")
+    suspend fun updateLocation(
+        @Header("Authorization") token: String,
+        @Body request: UpdateLocationRequest
+    ): Response<LocationUpdateResponse>
+
 }

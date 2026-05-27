@@ -514,6 +514,7 @@ export interface TransferRequestDto {
     patientDataSubmitted: boolean;
     patientDataRevealed: boolean;
     deliveredAt: string | null;
+    trackingToken: string | null;
 }
 
 export interface DecryptedPatientDataDto {

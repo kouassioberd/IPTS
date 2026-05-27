@@ -44,3 +44,17 @@ data class VitalsResponseDto(
     val notes:             String,
     val recordedAt:        String
 )
+
+// ── GPS location update ──────────────────────
+data class UpdateLocationRequest(
+    val latitude:  Double,
+    val longitude: Double
+)
+
+data class LocationUpdateResponse(
+    val ambulanceId: String,
+    val latitude:    Double,
+    val longitude:   Double,
+    val updatedAt:   String
+)
+

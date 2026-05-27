@@ -20,6 +20,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -135,6 +136,14 @@ fun JobScreen(
                 }
             }
         }
+
+        // start GPS posting when a job is loaded
+        LaunchedEffect(state.job) {
+            if (state.job != null) {
+                viewModel.startLocationUpdatesForCurrentJob()
+            }
+        }
+
     }
 }
 

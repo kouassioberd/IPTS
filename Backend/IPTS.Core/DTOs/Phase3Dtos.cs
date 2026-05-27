@@ -36,7 +36,8 @@ namespace IPTS.Core.DTOs
         DateTime ConfirmedAt,
         bool PatientDataSubmitted,
         bool PatientDataRevealed,
-        DateTime? DeliveredAt
+        DateTime? DeliveredAt,
+        string? TrackingToken // null until patient data submitted
     );
 
     // ─────────────────────────────────────────────────────────

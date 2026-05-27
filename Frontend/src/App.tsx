@@ -7,6 +7,7 @@ import NewTransferPage from "./pages/NewTransferPage";
 import SubmitPatientDataPage from "./pages/SubmitPatientDataPage";
 import TransferConfirmPage from "./pages/TransferConfirmPage";
 import DispatcherDashboardPage from "./pages/DispatcherDashboardPage";
+import FamilyTrackingPage from "./pages/FamilyTrackingPage";
 import { getToken, getUser } from "./services/api";
 
 function ProtectedRoute({ children, allowedRoles }: {
@@ -79,6 +80,11 @@ export default function App() {
                     <ProtectedRoute allowedRoles={["Dispatcher"]}>
                         <DispatcherDashboardPage />
                     </ProtectedRoute>
+                } />
+
+                {/* Family tracking page*/}
+                <Route path="/track/:token" element={
+                    <FamilyTrackingPage />
                 } />
 
                 {/* Default redirects */}

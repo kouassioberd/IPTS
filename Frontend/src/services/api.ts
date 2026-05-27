@@ -589,4 +589,24 @@ export interface DispatcherDashboardDto {
     activeTransfers: DispatcherTransferDto[];
 }
 
+// ── FAMILY TRACKING───────────────────────
+
+export interface FamilyTrackingDto {
+    patientStatus: string;
+    sendingHospitalName: string;
+    receivingHospitalName: string;
+    receivingHospitalAddress: string;
+    ambulanceLatitude: number;
+    ambulanceLongitude: number;
+    lastLocationUpdate: string;   // ISO datetime string
+    ambulanceUnit: string;
+    isExpired: boolean;
+}
+
+export const familyApi = {
+    track: (token: string) =>
+        apiFetch<FamilyTrackingDto>(`/family/${token}`),
+};
+
+
 

@@ -76,6 +76,7 @@ builder.Services.AddScoped<IBroadcastService, BroadcastService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
 builder.Services.AddScoped<IDispatcherService, DispatcherService>();
 builder.Services.AddScoped<ICrewService, CrewService>();
+builder.Services.AddScoped<IFamilyService, FamilyService>();
 
 
 // ── CORS ──────────────────────────────────────────────────────────

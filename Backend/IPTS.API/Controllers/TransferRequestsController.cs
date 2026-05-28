@@ -100,6 +100,18 @@ namespace IPTS.API.Controllers
                 .GetAuditLogAsync(id, CallerHospitalId);
             return Ok(logs);
         }
+
+        /// <summary>
+        /// Returns all vitals submitted for this transfer.
+        /// Accessible by both sending and receiving hospital doctors.
+        /// </summary>
+        [HttpGet("{id:guid}/vitals")]
+        [Authorize(Policy = "DoctorOnly")]
+        public async Task<IActionResult> GetVitals(Guid id)
+        {
+            var vitals = await _transferService.GetVitalsAsync(id);
+            return Ok(vitals);
+        }
     }
 
 }

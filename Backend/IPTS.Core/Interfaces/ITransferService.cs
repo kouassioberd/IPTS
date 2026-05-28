@@ -33,6 +33,8 @@ namespace IPTS.Core.Interfaces
         Task<List<AuditLogDto>> GetAuditLogAsync(
             Guid transferRequestId,
             Guid callerHospitalId);
+
+        Task<List<VitalsRecordDto>> GetVitalsAsync(Guid transferRequestId);
     }
 
 }

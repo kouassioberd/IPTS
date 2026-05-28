@@ -5,7 +5,7 @@ import {
     TRANSFER_STATUS_LABELS, TRANSFER_STATUS_COLORS,
 } from "../services/api";
 import type {
-    TransferRequestDto, DecryptedPatientDataDto, AuditLogDto,
+    TransferRequestDto, DecryptedPatientDataDto, AuditLogDto, VitalsRecordDto,
 } from "../services/api";
 
 
@@ -25,6 +25,7 @@ export default function TransferConfirmPage() {
     const [revealing, setRevealing] = useState(false);
     const [error, setError] = useState("");
     const [copied, setCopied] = useState(false);
+    const [vitals, setVitals] = useState<VitalsRecordDto[]>([]);
 
     useEffect(() => {
         if (!id) return;
@@ -35,12 +36,14 @@ export default function TransferConfirmPage() {
         if (!id) return;
         setLoading(true);
         try {
-            const [t, logs] = await Promise.all([
+            const [t, logs, v] = await Promise.all([
                 transferRequestsApi.getById(id),
                 transferRequestsApi.getAuditLog(id),
+                transferRequestsApi.getVitals(id),
             ]);
             setTransfer(t);
             setAuditLog(logs);
+            setVitals(v);
         } catch (e: unknown) {
             setError(getErrorMessage(e));
         } finally {
@@ -148,7 +151,7 @@ export default function TransferConfirmPage() {
                         </div>
 
                         {/* ── FAMILY TRACKING LINK ──────────────────── */}
-                        {transfer.trackingToken && (
+                        {transfer.trackingToken && !isReceivingHospital && (
                             <div style={{
                                 marginTop: 20,
                                 background: "rgba(0,194,212,0.07)",
@@ -293,6 +296,89 @@ export default function TransferConfirmPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Vitals Records */}
+                {vitals.length > 0 && (
+                    <div style={{
+                        background: "#112240",
+                        border: "1px solid rgba(0,194,212,0.2)",
+                        borderRadius: 16, padding: 24, marginBottom: 24
+                    }}>
+                        <h3 style={{
+                            color: "#00C2D4", fontSize: 16,
+                            fontWeight: 700, margin: "0 0 16px"
+                        }}>
+                            🩺 Vitals Records ({vitals.length})
+                        </h3>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {vitals.map((v, i) => (
+                                <div key={v.id} style={{
+                                    background: "rgba(255,255,255,0.03)",
+                                    borderRadius: 10, padding: "14px 18px",
+                                    border: "1px solid rgba(255,255,255,0.06)"
+                                }}>
+                                    <div style={{
+                                        display: "flex", justifyContent: "space-between",
+                                        marginBottom: 10
+                                    }}>
+                                        <span style={{
+                                            color: "#F0F6FF",
+                                            fontWeight: 600, fontSize: 13
+                                        }}>
+                                            Record #{i + 1}
+                                        </span>
+                                        <span style={{ color: "#8BA3C7", fontSize: 12 }}>
+                                            {new Date(v.recordedAt).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                                        gap: 10
+                                    }}>
+                                        {[
+                                            ["BP", v.bloodPressure],
+                                            ["HR", `${v.heartRate} bpm`],
+                                            ["SpO2", `${v.oxygenSaturation}%`],
+                                            ["GCS", `${v.glasgowComaScale}/15`],
+                                        ].map(([label, value]) => (
+                                            <div key={label} style={{
+                                                background: "rgba(0,194,212,0.06)",
+                                                borderRadius: 8, padding: "8px 12px",
+                                                textAlign: "center"
+                                            }}>
+                                                <div style={{
+                                                    color: "#8BA3C7", fontSize: 10,
+                                                    marginBottom: 4,
+                                                    textTransform: "uppercase",
+                                                    letterSpacing: 1
+                                                }}>
+                                                    {label}
+                                                </div>
+                                                <div style={{
+                                                    color: "#00C2D4",
+                                                    fontWeight: 700, fontSize: 15
+                                                }}>
+                                                    {value}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {v.notes && v.notes !== "None" && (
+                                        <p style={{
+                                            color: "#8BA3C7", fontSize: 12,
+                                            margin: "10px 0 0"
+                                        }}>
+                                            Notes: {v.notes}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                
 
                 {/* Audit log */}
                 {auditLog.length > 0 && (

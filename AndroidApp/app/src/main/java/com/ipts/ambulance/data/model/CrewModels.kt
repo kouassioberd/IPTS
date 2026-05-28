@@ -58,3 +58,8 @@ data class LocationUpdateResponse(
     val updatedAt:   String
 )
 
+data class UpdateJobStatusRequest(
+    val transferRequestId: String,
+    val newStatus: Int
+)
+

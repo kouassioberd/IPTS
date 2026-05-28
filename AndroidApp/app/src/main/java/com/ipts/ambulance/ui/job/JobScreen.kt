@@ -46,6 +46,8 @@ fun JobScreen(
     viewModel: JobViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    // Read role from TokenManager via a collectAsState
+    val role by viewModel.role.collectAsState(initial = "")
 
     Column(
         modifier = Modifier
@@ -112,6 +114,28 @@ fun JobScreen(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
+
+                // ── DRIVER ONLY: status update buttons ──────────────
+                if (role == "Driver") {
+                    val nextStatuses = mapOf(
+                        1 to (2 to "🚗 Set En Route"),
+                        2 to (3 to "🏥 Patient On Board"),
+                        3 to (4 to "🚑 In Transit"),
+                        4 to (5 to "✅ Delivered")
+                    )
+                    nextStatuses[job.status]?.let { (nextStatus, label) ->
+                        Button(
+                            onClick = { viewModel.updateStatus(nextStatus) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF00C2D4))
+                        ) {
+                            Text(label, color = Color(0xFF0A1628),
+                                fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
 
                 OutlinedButton(
                     onClick = {

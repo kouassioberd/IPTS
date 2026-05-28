@@ -61,6 +61,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("DispatcherOnly", p => p.RequireRole("Dispatcher"));
     options.AddPolicy("AmbulanceCrew", p => p.RequireRole("Driver", "Paramedic"));
     options.AddPolicy("HospitalStaff", p => p.RequireRole("Doctor", "Admin", "Dispatcher"));
+    options.AddPolicy("DriverOnly", p => p.RequireRole("Driver"));
+    options.AddPolicy("ParamedicOnly", p => p.RequireRole("Paramedic"));
 });
 
 // ── SERVICES ──────────────────────────────────────────────────────

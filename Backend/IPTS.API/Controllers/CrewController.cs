@@ -81,6 +81,28 @@ namespace IPTS.API.Controllers
                 .UpdateLocationAsync(request, CallerAmbulanceId);
             return Ok(result);
         }
+
+        /// <summary>
+        /// Driver updates the transfer status (EnRoute, PatientOnBoard, etc.)
+        /// Only accessible by drivers, not paramedics.
+        /// </summary>
+        [HttpPatch("job-status")]
+        [Authorize(Policy = "DriverOnly")]
+        public async Task<IActionResult> UpdateJobStatus(
+            [FromBody] UpdateJobStatusRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var result = await _crewService
+                    .UpdateJobStatusAsync(request, CallerAmbulanceId);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 
 }

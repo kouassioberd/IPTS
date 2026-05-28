@@ -15,6 +15,8 @@ namespace IPTS.Core.Interfaces
             SubmitVitalsRequest request, Guid crewId);
         Task<LocationUpdateResponse> UpdateLocationAsync(
             UpdateLocationRequest request, Guid ambulanceId);
+        Task<CrewActiveJobDto> UpdateJobStatusAsync(
+            UpdateJobStatusRequest request, Guid ambulanceId);
 
     }
 

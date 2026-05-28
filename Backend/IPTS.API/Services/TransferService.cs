@@ -265,5 +265,21 @@ namespace IPTS.API.Services
             DeliveredAt: t.DeliveredAt,
             TrackingToken: t.TrackingToken?.Token
             );
-   }
+
+        public async Task<List<VitalsRecordDto>> GetVitalsAsync(Guid transferRequestId)
+        {
+            return await _db.VitalsRecords
+                .Where(v => v.TransferRequestId == transferRequestId)
+                .OrderBy(v => v.RecordedAt)
+                .Select(v => new VitalsRecordDto(
+                    v.Id,
+                    v.BloodPressure,
+                    v.HeartRate,
+                    v.OxygenSaturation,
+                    v.GlasgowComaScale,
+                    v.Notes,
+                    v.RecordedAt))
+                .ToListAsync();
+        }
+    }
 }

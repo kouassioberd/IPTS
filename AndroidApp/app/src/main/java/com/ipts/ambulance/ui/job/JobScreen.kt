@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.BorderStroke
 
 // TransferStatus: 0=Confirmed, 1=AmbulanceAssigned, 2=EnRoute,
 //                 3=PatientOnBoard, 4=InTransit, 5=Delivered, 6=Cancelled
@@ -43,9 +44,12 @@ private val STATUS_LABELS = mapOf(
 @Composable
 fun JobScreen(
     onNavigateToVitals: (String) -> Unit,
+    onLogout: () -> Unit,
     viewModel: JobViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    // Read role from TokenManager via a collectAsState
+    val role by viewModel.role.collectAsState(initial = "")
 
     Column(
         modifier = Modifier
@@ -55,7 +59,8 @@ fun JobScreen(
             .padding(24.dp)
     ) {
         // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()) {
             Text("🚑", fontSize = 28.sp)
             Spacer(Modifier.width(10.dp))
             Column {
@@ -63,6 +68,15 @@ fun JobScreen(
                     fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Text("IPTS Ambulance Crew",
                     color = Color(0xFF8BA3C7), fontSize = 13.sp)
+            }
+            OutlinedButton(
+                onClick = { viewModel.logout(onLogout) },
+                border = BorderStroke(1.dp, Color(0xFFFF4D6A)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFFFF4D6A)
+                )
+            ) {
+                Text("Logout", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -113,20 +127,48 @@ fun JobScreen(
                 }
                 Spacer(Modifier.height(16.dp))
 
-                OutlinedButton(
-                    onClick = {
-                        android.util.Log.d("VITALS_DEBUG", "Navigating with id = '${job.transferRequestId}'")
-                        onNavigateToVitals(job.transferRequestId)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    border = androidx.compose.foundation
-                        .BorderStroke(1.dp, Color(0xFF00C2D4))
-                ) {
-                    Text("📋 Submit Vitals",
-                        color = Color(0xFF00C2D4),
-                        fontWeight = FontWeight.SemiBold)
+                // ── DRIVER ONLY: status update buttons ──────────────
+                if (role == "Driver") {
+                    val nextStatuses = mapOf(
+                        1 to (2 to "🚗 Set En Route"),
+                        2 to (3 to "🏥 Patient On Board"),
+                        3 to (4 to "🚑 In Transit"),
+                        4 to (5 to "✅ Delivered")
+                    )
+                    nextStatuses[job.status]?.let { (nextStatus, label) ->
+                        Button(
+                            onClick = { viewModel.updateStatus(nextStatus) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF00C2D4))
+                        ) {
+                            Text(label, color = Color(0xFF0A1628),
+                                fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
+                if (role == "Paramedic") {
+                    OutlinedButton(
+                        onClick = {
+                            android.util.Log.d(
+                                "VITALS_DEBUG",
+                                "Navigating with id = '${job.transferRequestId}'"
+                            )
+                            onNavigateToVitals(job.transferRequestId)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = androidx.compose.foundation
+                            .BorderStroke(1.dp, Color(0xFF00C2D4))
+                    ) {
+                        Text(
+                            "📋 Submit Vitals",
+                            color = Color(0xFF00C2D4),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
 
                 Button(onClick = { viewModel.loadJob() },
                     modifier = Modifier.fillMaxWidth(),

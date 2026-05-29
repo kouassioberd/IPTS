@@ -69,4 +69,9 @@ namespace IPTS.Core.DTOs
         DateTime UpdatedAt
     );
 
+    public record UpdateJobStatusRequest(
+        Guid TransferRequestId,
+        TransferStatus NewStatus
+    );
+
 }

@@ -102,4 +102,14 @@ namespace IPTS.Core.DTOs
         string? DeclineReason,
         DateTime? RespondedAt
     );
+
+    public record VitalsRecordDto(
+        Guid Id,
+        string BloodPressure,
+        int HeartRate,
+        int OxygenSaturation,
+        int GlasgowComaScale,
+        string Notes,
+        DateTime RecordedAt
+    );
 }

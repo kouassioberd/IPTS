@@ -30,4 +30,10 @@ interface CrewApiService {
         @Body request: UpdateLocationRequest
     ): Response<LocationUpdateResponse>
 
+    @PATCH("crew/job-status")
+    suspend fun updateJobStatus(
+        @Header("Authorization") token: String,
+        @Body request: UpdateJobStatusRequest
+    ): Response<CrewActiveJobDto>
+
 }

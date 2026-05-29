@@ -32,10 +32,19 @@ fun AppNavHost(navController: NavHostController) {
         }
 
         composable(Screen.Job.route) {
-            JobScreen(onNavigateToVitals = { id ->
+            JobScreen(
+                onNavigateToVitals = { id ->
                 navController.navigate(
                     Screen.Vitals.createRoute(id))
-            })
+                },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        // Clear the entire back stack so pressing back
+                        // after logout doesn't return to the job screen
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(

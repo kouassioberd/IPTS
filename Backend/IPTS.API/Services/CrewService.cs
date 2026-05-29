@@ -128,6 +128,75 @@ namespace IPTS.API.Services
             );
         }
 
+        // ── UPDATE JOB STATUS (Driver only) ───────────────────
+        public async Task<CrewActiveJobDto> UpdateJobStatusAsync(
+            UpdateJobStatusRequest request, Guid ambulanceId)
+        {
+            // Find the transfer assigned to this ambulance
+            var transfer = await _db.TransferRequests
+                .Include(t => t.SendingHospital)
+                .Include(t => t.ReceivingHospital)
+                .Include(t => t.AssignedAmbulance)
+                .Include(t => t.Vitals)
+                .FirstOrDefaultAsync(t =>
+                    t.Id == request.TransferRequestId &&
+                    t.AssignedAmbulanceId == ambulanceId)
+                ?? throw new InvalidOperationException(
+                    "Transfer not found or not assigned to your ambulance.");
+
+            // Enforce valid transitions — driver cannot skip steps
+            var allowed = new Dictionary<TransferStatus, List<TransferStatus>>
+            {
+                [TransferStatus.AmbulanceAssigned] = [TransferStatus.EnRoute],
+                [TransferStatus.EnRoute] = [TransferStatus.PatientOnBoard],
+                [TransferStatus.PatientOnBoard] = [TransferStatus.InTransit],
+                [TransferStatus.InTransit] = [TransferStatus.Delivered],
+            };
+
+            if (!allowed.TryGetValue(transfer.Status, out var nextStatuses) ||
+                !nextStatuses.Contains(request.NewStatus))
+                throw new InvalidOperationException(
+                    $"Cannot transition from {transfer.Status} to {request.NewStatus}.");
+
+            // Apply the new status
+            transfer.Status = request.NewStatus;
+
+            // On Delivered: record the time and free the ambulance
+            if (request.NewStatus == TransferStatus.Delivered)
+            {
+                transfer.DeliveredAt = DateTime.UtcNow;
+                if (transfer.AssignedAmbulance != null)
+                    transfer.AssignedAmbulance.Status = AmbulanceStatus.Available;
+            }
+
+            // Write audit log
+            _db.AuditLogs.Add(new TransferAuditLog
+            {
+                Id = Guid.NewGuid(),
+                TransferRequestId = transfer.Id,
+                Action = $"StatusUpdated:{request.NewStatus}",
+                PerformedByUserId = ambulanceId,
+                PerformedByRole = "Driver",
+                Timestamp = DateTime.UtcNow,
+                Details = $"Driver updated transfer status to {request.NewStatus}",
+            });
+
+            await _db.SaveChangesAsync();
+
+            // Return updated job so the Android app reflects the new status instantly
+            return new CrewActiveJobDto(
+                TransferRequestId: transfer.Id,
+                SendingHospitalName: transfer.SendingHospital?.Name ?? "",
+                ReceivingHospitalName: transfer.ReceivingHospital?.Name ?? "",
+                ReceivingHospitalAddress: transfer.ReceivingHospital?.Address ?? "",
+                ReceivingHospitalLatitude: transfer.ReceivingHospital?.Latitude ?? 0,
+                ReceivingHospitalLongitude: transfer.ReceivingHospital?.Longitude ?? 0,
+                Status: transfer.Status,
+                AmbulanceUnit: transfer.AssignedAmbulance?.UnitNumber ?? "",
+                ConfirmedAt: transfer.ConfirmedAt,
+                HasVitalsSubmitted: transfer.Vitals.Any()
+            );
+        }
 
         // ── JWT HELPER ────────────────────────────────────────
         private string GenerateCrewJwt(AmbulanceCrew crew)

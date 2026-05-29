@@ -189,7 +189,12 @@ export const transferRequestsApi = {
     // Get audit log for a transfer
     getAuditLog: (id: string) =>
         apiFetch<AuditLogDto[]>(`/transferrequests/${id}/audit-log`),
+
+    // Get vitals for a transfer
+    getVitals: (id: string) =>
+        apiFetch<VitalsRecordDto[]>(`/transferrequests/${id}/vitals`),
 };
+
 
 // ── DISPATCHER API ─────────────────────────────────────────
 export const dispatcherApi = {
@@ -219,6 +224,9 @@ export const dispatcherApi = {
     // GET /api/dispatcher/transfers/{id}
     getTransfer: (id: string) =>
         apiFetch<DispatcherTransferDto>(`/dispatcher/transfers/${id}`),
+    //getVitals for a transfer
+    getVitals: (id: string) =>
+        apiFetch<VitalsRecordDto[]>(`/TransferRequests/${id}/vitals`),
 };
 
 
@@ -538,6 +546,16 @@ export interface AuditLogDto {
     details: string;
 }
 
+export interface VitalsRecordDto {
+    id: string;
+    bloodPressure: string;
+    heartRate: number;
+    oxygenSaturation: number;
+    glasgowComaScale: number;
+    notes: string;
+    recordedAt: string;
+}
+
 // ── DISPATCHER TYPES ───────────────────────────────────────
 // AmbulanceStatus enum: 0=Available, 1=Assigned, 2=InTransit, 3=Maintenance
 export const AMBULANCE_STATUS_LABELS: Record<number, string> = {
@@ -608,6 +626,7 @@ export const familyApi = {
     track: (token: string) =>
         apiFetch<FamilyTrackingDto>(`/family/${token}`),
 };
+
 
 
 

@@ -56,7 +56,7 @@ namespace IPTS.API.Controllers
         /// multiple vitals records for the same transfer job.
         /// </summary>
         [HttpPost("vitals")]
-        [Authorize(Policy = "AmbulanceCrew")]
+        [Authorize(Policy = "ParamedicOnly")]
         public async Task<IActionResult> SubmitVitals(
             [FromBody] SubmitVitalsRequest request)
         {

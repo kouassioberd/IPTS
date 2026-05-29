@@ -136,21 +136,27 @@ fun JobScreen(
                         Spacer(Modifier.height(8.dp))
                     }
                 }
-
-                OutlinedButton(
-                    onClick = {
-                        android.util.Log.d("VITALS_DEBUG", "Navigating with id = '${job.transferRequestId}'")
-                        onNavigateToVitals(job.transferRequestId)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    border = androidx.compose.foundation
-                        .BorderStroke(1.dp, Color(0xFF00C2D4))
-                ) {
-                    Text("📋 Submit Vitals",
-                        color = Color(0xFF00C2D4),
-                        fontWeight = FontWeight.SemiBold)
+                if (role == "Paramedic") {
+                    OutlinedButton(
+                        onClick = {
+                            android.util.Log.d(
+                                "VITALS_DEBUG",
+                                "Navigating with id = '${job.transferRequestId}'"
+                            )
+                            onNavigateToVitals(job.transferRequestId)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = androidx.compose.foundation
+                            .BorderStroke(1.dp, Color(0xFF00C2D4))
+                    ) {
+                        Text(
+                            "📋 Submit Vitals",
+                            color = Color(0xFF00C2D4),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
                 }
-                Spacer(Modifier.height(8.dp))
 
                 Button(onClick = { viewModel.loadJob() },
                     modifier = Modifier.fillMaxWidth(),

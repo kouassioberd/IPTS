@@ -36,14 +36,21 @@ export default function TransferConfirmPage() {
         if (!id) return;
         setLoading(true);
         try {
-            const [t, logs, v] = await Promise.all([
+            const [t, logs] = await Promise.all([
                 transferRequestsApi.getById(id),
                 transferRequestsApi.getAuditLog(id),
-                transferRequestsApi.getVitals(id),
             ]);
             setTransfer(t);
             setAuditLog(logs);
-            setVitals(v);
+
+            // Only receiving hospital can see vitals — sending gets 403, ignore it
+            try {
+                const v = await transferRequestsApi.getVitals(id);
+                setVitals(v);
+            } catch {
+                setVitals([]);
+            }
+
         } catch (e: unknown) {
             setError(getErrorMessage(e));
         } finally {

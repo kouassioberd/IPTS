@@ -19,13 +19,7 @@ function getErrorMessage(error: unknown): string {
     return "An unexpected error occurred";
 }
 
-// TransferStatus enum values for the update dropdown
-const STATUS_TRANSITIONS: Record<number, { label: string; value: number }[]> = {
-    1: [{ label: "→ En Route", value: 2 }, { label: "→ Cancelled", value: 6 }],
-    2: [{ label: "→ Patient On Board", value: 3 }, { label: "→ Cancelled", value: 6 }],
-    3: [{ label: "→ In Transit", value: 4 }, { label: "→ Cancelled", value: 6 }],
-    4: [{ label: "→ Delivered", value: 5 }, { label: "→ Cancelled", value: 6 }],
-};
+
 
 //The component function and state:
 export default function DispatcherDashboardPage() {
@@ -37,11 +31,9 @@ export default function DispatcherDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [assigning, setAssigning] = useState<string | null>(null);
-    const [updating, setUpdating] = useState<string | null>(null);
     // Which transfer is expanded for assign/update actions
     const [expanded, setExpanded] = useState<string | null>(null);
     const [selectedAmb, setSelectedAmb] = useState<string>("");
-    const [statusNotes, setStatusNotes] = useState("");
 
     useEffect(() => {
         if (!user) { navigate("/login"); return; }
@@ -77,21 +69,7 @@ export default function DispatcherDashboardPage() {
         finally { setAssigning(null); }
     };
 
-    //The update status handler:
-    const handleUpdateStatus = async (transferId: string, newStatus: number) => {
-        setUpdating(transferId);
-        try {
-            await dispatcherApi.updateStatus({
-                transferRequestId: transferId,
-                newStatus,
-                notes: statusNotes || undefined,
-            });
-            setExpanded(null);
-            setStatusNotes("");
-            await loadData();
-        } catch (e) { setError(getErrorMessage(e)); }
-        finally { setUpdating(null); }
-    };
+    
 
     //The render — navbar, summary cards, and transfer list:
     return (
@@ -216,10 +194,6 @@ export default function DispatcherDashboardPage() {
                                     onSelectAmb={setSelectedAmb}
                                     onAssign={() => handleAssign(t.id)}
                                     assigning={assigning === t.id}
-                                    onUpdateStatus={(s) => handleUpdateStatus(t.id, s)}
-                                    updating={updating === t.id}
-                                    statusNotes={statusNotes}
-                                    onNotesChange={setStatusNotes}
                                 />
                             ))}
                         </div>
@@ -233,7 +207,6 @@ export default function DispatcherDashboardPage() {
 //The TransferCard sub - component :
 function TransferCard({ transfer, ambulances, expanded, onToggle,
     selectedAmb, onSelectAmb, onAssign, assigning,
-    onUpdateStatus, updating, statusNotes, onNotesChange,
 }: {
     transfer: DispatcherTransferDto;
     ambulances: AmbulanceDetailDto[];
@@ -243,16 +216,10 @@ function TransferCard({ transfer, ambulances, expanded, onToggle,
     onSelectAmb: (id: string) => void;
     onAssign: () => void;
     assigning: boolean;
-    onUpdateStatus: (status: number) => void;
-    updating: boolean;
-    statusNotes: string;
-    onNotesChange: (v: string) => void;
 }) {
     const statusColor = TRANSFER_STATUS_COLORS[transfer.status] ?? "#8BA3C7";
     const statusLabel = TRANSFER_STATUS_LABELS[transfer.status] ?? "Unknown";
-    const transitions = STATUS_TRANSITIONS[transfer.status] ?? [];
     const isConfirmed = transfer.status === 0;  // Confirmed — needs ambulance
-    const canProgress = transitions.length > 0;
 
     return (
         <div style={{
@@ -379,56 +346,6 @@ function TransferCard({ transfer, ambulances, expanded, onToggle,
                                     </button>
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {/* UPDATE STATUS — shown when ambulance is assigned */}
-                    {canProgress && (
-                        <div style={{
-                            background: "rgba(0,194,212,0.06)",
-                            border: "1px solid rgba(0,194,212,0.2)",
-                            borderRadius: 10, padding: 16
-                        }}>
-                            <p style={{
-                                color: "#00C2D4", fontSize: 13,
-                                margin: "0 0 12px", fontWeight: 600
-                            }}>
-                                Update transfer status
-                            </p>
-                            <input
-                                placeholder="Optional notes (e.g. traffic delay)"
-                                value={statusNotes}
-                                onChange={e => onNotesChange(e.target.value)}
-                                style={{
-                                    width: "100%", background: "#0A1628",
-                                    border: "1px solid rgba(255,255,255,0.1)",
-                                    borderRadius: 8, padding: "10px 12px",
-                                    color: "#F0F6FF", fontSize: 14, outline: "none",
-                                    marginBottom: 12, boxSizing: "border-box" as const
-                                }}
-                            />
-                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                                {transitions.map(tr => (
-                                    <button
-                                        key={tr.value}
-                                        onClick={() => onUpdateStatus(tr.value)}
-                                        disabled={updating}
-                                        style={{
-                                            background: tr.value === 6
-                                                ? "rgba(255,77,106,0.15)"
-                                                : "linear-gradient(135deg,#1E5FBF,#00C2D4)",
-                                            border: tr.value === 6
-                                                ? "1px solid rgba(255,77,106,0.4)"
-                                                : "none",
-                                            borderRadius: 8, padding: "10px 18px",
-                                            color: tr.value === 6 ? "#FF4D6A" : "#fff",
-                                            fontSize: 14, fontWeight: 600,
-                                            cursor: updating ? "not-allowed" : "pointer"
-                                        }}>
-                                        {updating ? "Updating..." : tr.label}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
                     )}
                 </div>

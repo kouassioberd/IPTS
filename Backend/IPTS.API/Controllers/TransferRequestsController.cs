@@ -108,10 +108,17 @@ namespace IPTS.API.Controllers
         [HttpGet("{id:guid}/vitals")]
         [Authorize(Policy = "DoctorOnly")]
         public async Task<IActionResult> GetVitals(Guid id)
+
         {
-            var vitals = await _transferService.GetVitalsAsync(id);
-            return Ok(vitals);
+            try
+            {
+                var vitals = await _transferService.GetVitalsAsync(id, CallerHospitalId);
+                return Ok(vitals);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
     }
-
 }

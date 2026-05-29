@@ -34,7 +34,9 @@ namespace IPTS.Core.Interfaces
             Guid transferRequestId,
             Guid callerHospitalId);
 
-        Task<List<VitalsRecordDto>> GetVitalsAsync(Guid transferRequestId);
+        Task<List<VitalsRecordDto>> GetVitalsAsync(
+            Guid transferRequestId,
+               Guid callerHospitalId);
     }
 
 }

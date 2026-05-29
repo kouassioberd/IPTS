@@ -266,8 +266,20 @@ namespace IPTS.API.Services
             TrackingToken: t.TrackingToken?.Token
             );
 
-        public async Task<List<VitalsRecordDto>> GetVitalsAsync(Guid transferRequestId)
+        public async Task<List<VitalsRecordDto>> GetVitalsAsync(
+            Guid transferRequestId,
+            Guid callerHospitalId)
         {
+            // Security check: only receiving hospital can see vitals
+            var transfer = await _db.TransferRequests
+                .FirstOrDefaultAsync(t => t.Id == transferRequestId);
+
+            if (transfer is null) return [];
+
+            if (transfer.ReceivingHospitalId != callerHospitalId)
+                throw new UnauthorizedAccessException(
+                    "Only the receiving hospital can access vitals.");
+
             return await _db.VitalsRecords
                 .Where(v => v.TransferRequestId == transferRequestId)
                 .OrderBy(v => v.RecordedAt)

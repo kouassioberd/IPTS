@@ -65,26 +65,6 @@ namespace IPTS.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Progress the transfer: EnRoute → PatientOnBoard → InTransit → Delivered.
-        /// On Delivered: ambulance freed, performance stats updated.
-        /// </summary>
-        [HttpPatch("status")]
-        public async Task<IActionResult> UpdateStatus(
-        [FromBody] UpdateTransferStatusRequest request)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            try
-            {
-                var result = await _dispatcherService.UpdateStatusAsync(
-                    request, CallerUserId, CallerHospitalId);
-                return Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
 
         /// <summary>
         /// Get a single transfer with full ambulance detail.

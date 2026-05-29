@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.BorderStroke
 
 // TransferStatus: 0=Confirmed, 1=AmbulanceAssigned, 2=EnRoute,
 //                 3=PatientOnBoard, 4=InTransit, 5=Delivered, 6=Cancelled
@@ -43,6 +44,7 @@ private val STATUS_LABELS = mapOf(
 @Composable
 fun JobScreen(
     onNavigateToVitals: (String) -> Unit,
+    onLogout: () -> Unit,
     viewModel: JobViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -57,7 +59,8 @@ fun JobScreen(
             .padding(24.dp)
     ) {
         // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()) {
             Text("🚑", fontSize = 28.sp)
             Spacer(Modifier.width(10.dp))
             Column {
@@ -65,6 +68,15 @@ fun JobScreen(
                     fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Text("IPTS Ambulance Crew",
                     color = Color(0xFF8BA3C7), fontSize = 13.sp)
+            }
+            OutlinedButton(
+                onClick = { viewModel.logout(onLogout) },
+                border = BorderStroke(1.dp, Color(0xFFFF4D6A)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFFFF4D6A)
+                )
+            ) {
+                Text("Logout", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         Spacer(Modifier.height(24.dp))

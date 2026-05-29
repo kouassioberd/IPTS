@@ -131,6 +131,13 @@ class JobViewModel @Inject constructor(
             )
         }
     }
+    fun logout(onLoggedOut: () -> Unit) {
+        viewModelScope.launch {
+            locationJob?.cancel()        // stop GPS posting
+            tokenManager.clear()         // wipe token + all stored data
+            onLoggedOut()                // navigate back to login
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

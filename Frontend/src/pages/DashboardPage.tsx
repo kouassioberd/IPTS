@@ -56,7 +56,15 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!user) { navigate("/login"); return; }
         loadAll();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (selectedHospitalId) {
+            loadWeeklyData(selectedHospitalId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedHospitalId]);
 
     const loadAll = async () => {
         try {

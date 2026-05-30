@@ -3,12 +3,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     hospitalsApi, wardsApi, bedsApi, staffApi,
-    clearAuth, getUser,
+    clearAuth, getUser, performanceApi,
 } from "../services/api";
 import type {
     HospitalDashboardDto, WardDetailDto,
-    StaffDto, CreateStaffRequest, CreateWardRequest,
+    StaffDto, CreateStaffRequest, CreateWardRequest, PerformanceSummaryDto, WeeklyTransferDto,
 } from "../services/api";
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    Tooltip, ResponsiveContainer, Cell,
+} from 'recharts';
 
 // ── CONSTANTS ─────────────────────────────────────────────────────
 const WARD_TYPES = ["ICU", "ER", "General", "Surgery", "Pediatric", "Cardiology"];
@@ -19,7 +23,7 @@ const BED_COLORS: Record<number, string> = {
 };
 const AMB_STATUSES = ["Available", "Assigned", "In Transit", "Maintenance"];
 
-type ActiveTab = "beds" | "staff" | "ambulances";
+type ActiveTab = "beds" | "staff" | "ambulances" | "reports";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -40,6 +44,10 @@ export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<ActiveTab>("beds");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [reportData, setReportData] = useState<PerformanceSummaryDto | null>(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
+    const [weeklyData, setWeeklyData] = useState<WeeklyTransferDto[]>([]);
 
     // Modal states
     const [showAddWard, setShowAddWard] = useState(false);
@@ -92,6 +100,33 @@ export default function DashboardPage() {
             await loadAll();
         } catch (e: unknown) {
             alert("Failed to create staff: " + getErrorMessage(e));
+        }
+    };
+
+    const loadReportData = async () => {
+        setReportLoading(true);
+        try {
+            const report = await performanceApi.getReport();
+            setReportData(report);
+            if (report.hospitals.length > 0 && !selectedHospitalId) {
+                setSelectedHospitalId(report.hospitals[0].hospitalId);
+                const weekly = await performanceApi.getWeeklyTransfers(
+                    report.hospitals[0].hospitalId, 8);
+                setWeeklyData(weekly);
+            }
+        } catch (e: unknown) {
+            setError(getErrorMessage(e));
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    const loadWeeklyData = async (hospitalId: string) => {
+        try {
+            const data = await performanceApi.getWeeklyTransfers(hospitalId, 8);
+            setWeeklyData(data);
+        } catch {
+            setWeeklyData([]);
         }
     };
 
@@ -240,6 +275,19 @@ export default function DashboardPage() {
                             textTransform: "capitalize",
                         }}>{tab === "beds" ? "🛏 Wards & Beds" : tab === "staff" ? "👥 Staff" : "🚑 Ambulances"}</button>
                     ))}
+                    <button
+                        onClick={() => {
+                            setActiveTab("reports");
+                            if (!reportData) loadReportData();
+                        }}
+                        style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            padding: "10px 20px", fontSize: 14, fontWeight: 500,
+                            color: activeTab === "reports" ? "#00C2D4" : "#8BA3C7",
+                            borderBottom: activeTab === "reports" ? "2px solid #00C2D4" : "2px solid transparent",
+                        }}>
+                        📊 Reports
+                    </button>
                 </div>
 
                 {/* ── BEDS TAB ── */}
@@ -374,6 +422,210 @@ export default function DashboardPage() {
                     </div>
                 )}
             </div>
+
+            {/* ── REPORTS TAB ── */}
+            {activeTab === "reports" && (
+                <div>
+                    {/* Header + Refresh */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                        <div>
+                            <h2 style={{ color: "#F0F6FF", fontSize: 17, fontWeight: 600, margin: "0 0 4px" }}>
+                                Performance Reports
+                            </h2>
+                            <p style={{ color: "#8BA3C7", fontSize: 13, margin: 0 }}>
+                                Based on HospitalPerformanceStat — updated on every broadcast response and delivery.
+                            </p>
+                        </div>
+                        <button
+                            onClick={loadReportData}
+                            disabled={reportLoading}
+                            style={{
+                                background: reportLoading ? "rgba(255,255,255,0.06)" : primaryBtn.background,
+                                border: "none", borderRadius: 8,
+                                padding: "8px 18px", color: "white",
+                                fontSize: 13, cursor: reportLoading ? "not-allowed" : "pointer",
+                                fontWeight: 600,
+                            }}>
+                            {reportLoading ? "Loading..." : "🔄 Refresh"}
+                        </button>
+                    </div>
+
+                    {reportLoading ? (
+                        <div style={{ textAlign: "center", padding: 60, color: "#8BA3C7" }}>
+                            Loading reports...
+                        </div>
+                    ) : reportData ? (
+                        <>
+                            {/* SYSTEM SUMMARY CARDS */}
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+                                {[
+                                    { label: "Total Hospitals", value: reportData.totalHospitals, color: "#7EB9FF" },
+                                    { label: "Total Transfers", value: reportData.totalTransfersAllTime, color: "#00D68F" },
+                                    { label: "System Acceptance Rate", value: `${reportData.systemWideAcceptanceRate}%`, color: "#00C2D4" },
+                                    { label: "Avg Response Time", value: `${reportData.systemWideAvgResponseMinutes} min`, color: "#FF9A3C" },
+                                ].map(card => (
+                                    <div key={card.label} style={{
+                                        background: "#112240",
+                                        border: "1px solid rgba(255,255,255,0.07)",
+                                        borderRadius: 12, padding: 20,
+                                    }}>
+                                        <div style={{ color: card.color, fontSize: 28, fontWeight: 700 }}>{card.value}</div>
+                                        <div style={{ color: "#8BA3C7", fontSize: 12, marginTop: 6 }}>{card.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* ACCEPTANCE RATE CHART */}
+                            <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                                <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: "0 0 20px" }}>
+                                    Acceptance Rate per Hospital (%)
+                                </h3>
+                                {reportData.hospitals.every(h => h.totalRequestsReceived === 0) ? (
+                                    <div style={{ textAlign: "center", padding: 40, color: "#8BA3C7", fontSize: 13 }}>
+                                        No broadcast data yet. Rates will appear after hospitals respond to transfers.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <BarChart data={reportData.hospitals} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis dataKey="hospitalName" tick={{ fill: "#8BA3C7", fontSize: 11 }} />
+                                            <YAxis domain={[0, 100]} tick={{ fill: "#8BA3C7", fontSize: 11 }} />
+                                            <Tooltip
+                                                contentStyle={{ background: "#112240", border: "1px solid #1E5FBF", color: "#F0F6FF", fontSize: 12 }}
+                                                formatter={(v: number) => [`${v}%`, "Acceptance Rate"]}
+                                            />
+                                            <Bar dataKey="acceptanceRate" radius={[4, 4, 0, 0]}>
+                                                {reportData.hospitals.map((_, i) => (
+                                                    <Cell key={i} fill={i % 2 === 0 ? "#00C2D4" : "#1E5FBF"} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+
+                            {/* AVG RESPONSE TIME CHART */}
+                            <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                                <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: "0 0 20px" }}>
+                                    Average Response Time per Hospital (minutes)
+                                </h3>
+                                {reportData.hospitals.every(h => h.avgResponseTimeMinutes === 0) ? (
+                                    <div style={{ textAlign: "center", padding: 40, color: "#8BA3C7", fontSize: 13 }}>
+                                        No response time data yet. Times are recorded when hospitals accept broadcasts.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <BarChart data={reportData.hospitals} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis dataKey="hospitalName" tick={{ fill: "#8BA3C7", fontSize: 11 }} />
+                                            <YAxis tick={{ fill: "#8BA3C7", fontSize: 11 }} />
+                                            <Tooltip
+                                                contentStyle={{ background: "#112240", border: "1px solid #1E5FBF", color: "#F0F6FF", fontSize: 12 }}
+                                                formatter={(v: number) => [`${v} min`, "Avg Response Time"]}
+                                            />
+                                            <Bar dataKey="avgResponseTimeMinutes" radius={[4, 4, 0, 0]}>
+                                                {reportData.hospitals.map((_, i) => (
+                                                    <Cell key={i} fill={i % 2 === 0 ? "#FF9A3C" : "#E67E22"} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+
+                            {/* WEEKLY TRANSFERS CHART */}
+                            <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                                    <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: 0 }}>
+                                        Weekly Transfers — Last 8 Weeks
+                                    </h3>
+                                    <select
+                                        value={selectedHospitalId ?? ""}
+                                        onChange={e => {
+                                            setSelectedHospitalId(e.target.value);
+                                            loadWeeklyData(e.target.value);
+                                        }}
+                                        style={{
+                                            background: "#0A1628",
+                                            border: "1px solid rgba(255,255,255,0.15)",
+                                            color: "#F0F6FF", borderRadius: 8,
+                                            padding: "6px 12px", fontSize: 13,
+                                        }}>
+                                        {reportData.hospitals.map(h => (
+                                            <option key={h.hospitalId} value={h.hospitalId}>
+                                                {h.hospitalName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {weeklyData.every(w => w.transferCount === 0) ? (
+                                    <div style={{ textAlign: "center", padding: 40, color: "#8BA3C7", fontSize: 13 }}>
+                                        No delivered transfers yet for this hospital.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <BarChart data={weeklyData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis dataKey="weekLabel" tick={{ fill: "#8BA3C7", fontSize: 11 }} />
+                                            <YAxis allowDecimals={false} tick={{ fill: "#8BA3C7", fontSize: 11 }} />
+                                            <Tooltip
+                                                contentStyle={{ background: "#112240", border: "1px solid #1E5FBF", color: "#F0F6FF", fontSize: 12 }}
+                                                formatter={(v: number) => [v, "Transfers"]}
+                                            />
+                                            <Bar dataKey="transferCount" fill="#00D68F" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+
+                            {/* SUMMARY TABLE */}
+                            <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
+                                <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>
+                                    All Hospitals — Summary Table
+                                </h3>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                                                {["Hospital", "Transfers", "Received", "Accepted", "Declined", "Accept %", "Avg Response"].map(col => (
+                                                    <th key={col} style={{ color: "#8BA3C7", fontWeight: 600, padding: "8px 12px", textAlign: "left" }}>{col}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.hospitals.map((h, i) => (
+                                                <tr key={h.hospitalId} style={{
+                                                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                                                    background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)",
+                                                }}>
+                                                    <td style={{ color: "#F0F6FF", padding: "10px 12px", fontWeight: 600 }}>{h.hospitalName}</td>
+                                                    <td style={{ color: "#00D68F", padding: "10px 12px" }}>{h.totalTransfersHandled}</td>
+                                                    <td style={{ color: "#8BA3C7", padding: "10px 12px" }}>{h.totalRequestsReceived}</td>
+                                                    <td style={{ color: "#00C2D4", padding: "10px 12px" }}>{h.totalAccepted}</td>
+                                                    <td style={{ color: "#FF4D6A", padding: "10px 12px" }}>{h.totalDeclined}</td>
+                                                    <td style={{
+                                                        color: h.acceptanceRate >= 70 ? "#00D68F" : h.acceptanceRate >= 40 ? "#FF9A3C" : "#FF4D6A",
+                                                        padding: "10px 12px", fontWeight: 700,
+                                                    }}>{h.acceptanceRate}%</td>
+                                                    <td style={{ color: "#8BA3C7", padding: "10px 12px" }}>{h.avgResponseTimeMinutes} min</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ textAlign: "center", padding: 60 }}>
+                            <button
+                                onClick={loadReportData}
+                                style={{ ...primaryBtn, fontSize: 14, padding: "10px 24px" }}>
+                                Load Reports
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* ── ADD WARD MODAL ── */}
             {showAddWard && (

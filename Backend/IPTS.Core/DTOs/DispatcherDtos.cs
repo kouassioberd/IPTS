@@ -59,7 +59,8 @@ namespace IPTS.Core.DTOs
         // Ambulance info — null if not yet assigned
         Guid? AssignedAmbulanceId,
         string? AssignedAmbulanceUnit,
-        AmbulanceStatus? AmbulanceStatus
+        AmbulanceStatus? AmbulanceStatus,
+        string? TrackingToken
     );
 
     // ─────────────────────────────────────────────────────────
@@ -73,4 +74,6 @@ namespace IPTS.Core.DTOs
         int AvailableAmbulances,
         List<DispatcherTransferDto> ActiveTransfers
     );
+
+
 }

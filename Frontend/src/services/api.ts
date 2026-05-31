@@ -79,7 +79,7 @@ export const hospitalsApi = {
 export const performanceApi = {
     // Returns system-wide summary + per-hospital stats
     getReport: () =>
-        apiFetch<PerformanceSummaryDto>("/Hospitals/performance-report"),
+        apiFetch<HospitalPerformanceReportDto>("/Hospitals/performance-report"),
 
     // Returns week-by-week delivered transfer counts for one hospital
     getWeeklyTransfers: (hospitalId: string, weeks = 8) =>

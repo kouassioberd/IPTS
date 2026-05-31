@@ -7,7 +7,7 @@ import {
 } from "../services/api";
 import type {
     HospitalDashboardDto, WardDetailDto,
-    StaffDto, CreateStaffRequest, CreateWardRequest, PerformanceSummaryDto, WeeklyTransferDto,
+    StaffDto, CreateStaffRequest, CreateWardRequest, HospitalPerformanceReportDto, WeeklyTransferDto,
 } from "../services/api";
 import {
     Chart as ChartJS,
@@ -18,7 +18,6 @@ import {
     Tooltip,
     Legend,
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -52,7 +51,7 @@ export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<ActiveTab>("beds");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [reportData, setReportData] = useState<PerformanceSummaryDto | null>(null);
+    const [reportData, setReportData] = useState<HospitalPerformanceReportDto | null>(null);
     const [reportLoading, setReportLoading] = useState(false);
     const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
     const [weeklyData, setWeeklyData] = useState<WeeklyTransferDto[]>([]);
@@ -124,10 +123,10 @@ export default function DashboardPage() {
         try {
             const report = await performanceApi.getReport();
             setReportData(report);
-            if (report.hospitals.length > 0 && !selectedHospitalId) {
-                setSelectedHospitalId(report.hospitals[0].hospitalId);
-                const weekly = await performanceApi.getWeeklyTransfers(
-                    report.hospitals[0].hospitalId, 8);
+            // Load weekly data for this hospital
+            if (!selectedHospitalId && user?.hospitalId) {
+                setSelectedHospitalId(user.hospitalId);
+                const weekly = await performanceApi.getWeeklyTransfers(user.hospitalId, 8);
                 setWeeklyData(weekly);
             }
         } catch (e: unknown) {
@@ -181,6 +180,9 @@ export default function DashboardPage() {
 
     const occupancyPct = dashboard.totalBeds > 0
         ? Math.round((dashboard.occupiedBeds / dashboard.totalBeds) * 100) : 0;
+
+    // safe local reference for rendering (avoids multiple ?. checks inline)
+    const perf = reportData;
 
     return (
         <div style={{ minHeight: "100vh", background: "#0A1628", fontFamily: "'Inter', sans-serif" }}>
@@ -438,292 +440,24 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* ── REPORTS TAB ── */}
-                {activeTab === "reports" && (
-                    <div>
-                        {/* Header + Refresh */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                            <div>
-                                <h2 style={{ color: "#F0F6FF", fontSize: 17, fontWeight: 600, margin: "0 0 4px" }}>
-                                    Performance Reports
-                                </h2>
-                                <p style={{ color: "#8BA3C7", fontSize: 13, margin: 0 }}>
-                                    Based on HospitalPerformanceStat — updated on every broadcast response and delivery.
-                                </p>
-                            </div>
-                            <button
-                                onClick={loadReportData}
-                                disabled={reportLoading}
-                                style={{
-                                    background: reportLoading ? "rgba(255,255,255,0.06)" : primaryBtn.background,
-                                    border: "none", borderRadius: 8,
-                                    padding: "8px 18px", color: "white",
-                                    fontSize: 13, cursor: reportLoading ? "not-allowed" : "pointer",
-                                    fontWeight: 600,
-                                }}>
-                                {reportLoading ? "Loading..." : "🔄 Refresh"}
-                            </button>
+                {/* MY HOSPITAL PERFORMANCE CARDS */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+                    {[
+                        { label: "Transfers Handled", value: perf ? perf.totalTransfersHandled : "-", color: "#00D68F" },
+                        { label: "Requests Received", value: perf ? perf.totalRequestsReceived : "-", color: "#7EB9FF" },
+                        { label: "Acceptance Rate", value: perf ? `${perf.acceptanceRate}%` : "-", color: "#00C2D4" },
+                        { label: "Avg Response Time", value: perf ? `${perf.avgResponseTimeMinutes} min` : "-", color: "#FF9A3C" },
+                    ].map(card => (
+                        <div key={card.label} style={{
+                            background: "#112240",
+                            border: "1px solid rgba(255,255,255,0.07)",
+                            borderRadius: 12, padding: 20,
+                        }}>
+                            <div style={{ color: card.color, fontSize: 28, fontWeight: 700 }}>{card.value}</div>
+                            <div style={{ color: "#8BA3C7", fontSize: 12, marginTop: 6 }}>{card.label}</div>
                         </div>
-
-                        {reportLoading ? (
-                            <div style={{ textAlign: "center", padding: 60, color: "#8BA3C7" }}>
-                                Loading reports...
-                            </div>
-                        ) : reportData ? (
-                            <>
-                                {/* SYSTEM SUMMARY CARDS */}
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                                    {[
-                                        { label: "Total Hospitals", value: reportData.totalHospitals, color: "#7EB9FF" },
-                                        { label: "Total Transfers", value: reportData.totalTransfersAllTime, color: "#00D68F" },
-                                        { label: "System Acceptance Rate", value: `${reportData.systemWideAcceptanceRate}%`, color: "#00C2D4" },
-                                        { label: "Avg Response Time", value: `${reportData.systemWideAvgResponseMinutes} min`, color: "#FF9A3C" },
-                                    ].map(card => (
-                                        <div key={card.label} style={{
-                                            background: "#112240",
-                                            border: "1px solid rgba(255,255,255,0.07)",
-                                            borderRadius: 12, padding: 20,
-                                        }}>
-                                            <div style={{ color: card.color, fontSize: 28, fontWeight: 700 }}>{card.value}</div>
-                                            <div style={{ color: "#8BA3C7", fontSize: 12, marginTop: 6 }}>{card.label}</div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* ACCEPTANCE RATE CHART */}
-                                <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                                    <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: "0 0 20px" }}>
-                                        Acceptance Rate per Hospital (%)
-                                    </h3>
-                                    {reportData.hospitals.every(h => h.totalRequestsReceived === 0) ? (
-                                        <div style={{ textAlign: "center", padding: 40, color: "#8BA3C7", fontSize: 13 }}>
-                                            No broadcast data yet. Rates will appear after hospitals respond to transfers.
-                                        </div>
-                                    ) : (
-                                                <div style={{ height: 220 }}>
-                                                    <Bar
-                                                        data={{
-                                                            labels: reportData.hospitals.map(h => h.hospitalName),
-                                                            datasets: [{
-                                                                label: 'Acceptance Rate (%)',
-                                                                data: reportData.hospitals.map(h => h.acceptanceRate),
-                                                                backgroundColor: reportData.hospitals.map((_, i) =>
-                                                                    i % 2 === 0 ? '#00C2D4' : '#1E5FBF'),
-                                                                borderRadius: 4,
-                                                            }]
-                                                        }}
-                                                        options={{
-                                                            responsive: true,
-                                                            maintainAspectRatio: false,
-                                                            scales: {
-                                                                y: {
-                                                                    max: 100,
-                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
-                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                                                },
-                                                                x: {
-                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
-                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                                                }
-                                                            },
-                                                            plugins: {
-                                                                legend: { display: false },
-                                                                tooltip: {
-                                                                    backgroundColor: '#112240',
-                                                                    borderColor: '#1E5FBF',
-                                                                    borderWidth: 1,
-                                                                    titleColor: '#F0F6FF',
-                                                                    bodyColor: '#8BA3C7',
-                                                                    callbacks: {
-                                                                        label: (ctx) => `${ctx.raw}%`
-                                                                    }
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                    )}
-                                </div>
-
-                                {/* AVG RESPONSE TIME CHART */}
-                                <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                                    <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: "0 0 20px" }}>
-                                        Average Response Time per Hospital (minutes)
-                                    </h3>
-                                    {reportData.hospitals.every(h => h.avgResponseTimeMinutes === 0) ? (
-                                        <div style={{ textAlign: "center", padding: 40, color: "#8BA3C7", fontSize: 13 }}>
-                                            No response time data yet. Times are recorded when hospitals accept broadcasts.
-                                        </div>
-                                    ) : (
-                                                <div style={{ height: 220 }}>
-                                                    <Bar
-                                                        data={{
-                                                            labels: reportData.hospitals.map(h => h.hospitalName),
-                                                            datasets: [{
-                                                                label: 'Avg Response Time (min)',
-                                                                data: reportData.hospitals.map(h => h.avgResponseTimeMinutes),
-                                                                backgroundColor: reportData.hospitals.map((_, i) =>
-                                                                    i % 2 === 0 ? '#FF9A3C' : '#E67E22'),
-                                                                borderRadius: 4,
-                                                            }]
-                                                        }}
-                                                        options={{
-                                                            responsive: true,
-                                                            maintainAspectRatio: false,
-                                                            scales: {
-                                                                y: {
-                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
-                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                                                },
-                                                                x: {
-                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
-                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                                                }
-                                                            },
-                                                            plugins: {
-                                                                legend: { display: false },
-                                                                tooltip: {
-                                                                    backgroundColor: '#112240',
-                                                                    borderColor: '#1E5FBF',
-                                                                    borderWidth: 1,
-                                                                    titleColor: '#F0F6FF',
-                                                                    bodyColor: '#8BA3C7',
-                                                                    callbacks: {
-                                                                        label: (ctx) => `${ctx.raw} min`
-                                                                    }
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                    )}
-                                </div>
-
-                                {/* WEEKLY TRANSFERS CHART */}
-                                <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                                        <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: 0 }}>
-                                            Weekly Transfers — Last 8 Weeks
-                                        </h3>
-                                        <select
-                                            value={selectedHospitalId ?? ""}
-                                            onChange={e => {
-                                                setSelectedHospitalId(e.target.value);
-                                                loadWeeklyData(e.target.value);
-                                            }}
-                                            style={{
-                                                background: "#0A1628",
-                                                border: "1px solid rgba(255,255,255,0.15)",
-                                                color: "#F0F6FF", borderRadius: 8,
-                                                padding: "6px 12px", fontSize: 13,
-                                            }}>
-                                            {reportData.hospitals.map(h => (
-                                                <option key={h.hospitalId} value={h.hospitalId}>
-                                                    {h.hospitalName}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    {weeklyData.every(w => w.transferCount === 0) ? (
-                                        <div style={{ textAlign: "center", padding: 40, color: "#8BA3C7", fontSize: 13 }}>
-                                            No delivered transfers yet for this hospital.
-                                        </div>
-                                    ) : (
-                                                <div style={{ height: 220 }}>
-                                                    <Bar
-                                                        data={{
-                                                            labels: weeklyData.map(w => w.weekLabel),
-                                                            datasets: [{
-                                                                label: 'Transfers',
-                                                                data: weeklyData.map(w => w.transferCount),
-                                                                backgroundColor: '#00D68F',
-                                                                borderRadius: 4,
-                                                            }]
-                                                        }}
-                                                        options={{
-                                                            responsive: true,
-                                                            maintainAspectRatio: false,
-                                                            scales: {
-                                                                y: {
-                                                                    ticks: {
-                                                                        color: '#8BA3C7',
-                                                                        font: { size: 11 },
-                                                                        stepSize: 1,
-                                                                    },
-                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                                                },
-                                                                x: {
-                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
-                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                                                }
-                                                            },
-                                                            plugins: {
-                                                                legend: { display: false },
-                                                                tooltip: {
-                                                                    backgroundColor: '#112240',
-                                                                    borderColor: '#1E5FBF',
-                                                                    borderWidth: 1,
-                                                                    titleColor: '#F0F6FF',
-                                                                    bodyColor: '#8BA3C7',
-                                                                    callbacks: {
-                                                                        label: (ctx) => `${ctx.raw} transfers`
-                                                                    }
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                    )}
-                                </div>
-
-                                {/* SUMMARY TABLE */}
-                                <div style={{ background: "#112240", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                                    <h3 style={{ color: "#F0F6FF", fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>
-                                        All Hospitals — Summary Table
-                                    </h3>
-                                    <div style={{ overflowX: "auto" }}>
-                                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                                                    {["Hospital", "Transfers", "Received", "Accepted", "Declined", "Accept %", "Avg Response"].map(col => (
-                                                        <th key={col} style={{ color: "#8BA3C7", fontWeight: 600, padding: "8px 12px", textAlign: "left" }}>{col}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {reportData.hospitals.map((h, i) => (
-                                                    <tr key={h.hospitalId} style={{
-                                                        borderBottom: "1px solid rgba(255,255,255,0.05)",
-                                                        background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)",
-                                                    }}>
-                                                        <td style={{ color: "#F0F6FF", padding: "10px 12px", fontWeight: 600 }}>{h.hospitalName}</td>
-                                                        <td style={{ color: "#00D68F", padding: "10px 12px" }}>{h.totalTransfersHandled}</td>
-                                                        <td style={{ color: "#8BA3C7", padding: "10px 12px" }}>{h.totalRequestsReceived}</td>
-                                                        <td style={{ color: "#00C2D4", padding: "10px 12px" }}>{h.totalAccepted}</td>
-                                                        <td style={{ color: "#FF4D6A", padding: "10px 12px" }}>{h.totalDeclined}</td>
-                                                        <td style={{
-                                                            color: h.acceptanceRate >= 70 ? "#00D68F" : h.acceptanceRate >= 40 ? "#FF9A3C" : "#FF4D6A",
-                                                            padding: "10px 12px", fontWeight: 700,
-                                                        }}>{h.acceptanceRate}%</td>
-                                                        <td style={{ color: "#8BA3C7", padding: "10px 12px" }}>{h.avgResponseTimeMinutes} min</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div style={{ textAlign: "center", padding: 60 }}>
-                                <button
-                                    onClick={loadReportData}
-                                    style={{ ...primaryBtn, fontSize: 14, padding: "10px 24px" }}>
-                                    Load Reports
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
+                    ))}
+                </div>
 
             </div>
 
@@ -868,8 +602,12 @@ function AddWardModal({ onClose, onSubmit }: {
         <Modal title="Add New Ward" onClose={onClose}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <Field label="Ward Name">
-                    <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                        placeholder="e.g. ICU Ward B" style={inputStyle} />
+                    <input
+                        value={form.name}
+                        onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                        placeholder="e.g. ICU Ward B"
+                        style={inputStyle}
+                    />
                 </Field>
                 <Field label="Ward Type">
                     <select value={form.type} onChange={e => setForm(p => ({ ...p, type: Number(e.target.value) }))} style={inputStyle}>

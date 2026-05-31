@@ -610,6 +610,7 @@ export interface DispatcherTransferDto {
     assignedAmbulanceId: string | null;
     assignedAmbulanceUnit: string | null;
     ambulanceStatus: number | null;
+    trackingToken: string | null;
 }
 
 export interface DispatcherDashboardDto {

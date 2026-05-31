@@ -93,14 +93,15 @@ namespace IPTS.API.Controllers
         }
 
         /// <summary>
-        /// Admin-only: returns performance stats for all hospitals.
+        /// Admin-only: returns performance stats for only the caller's hospital.
         /// Used by the Admin dashboard Reports tab.
         /// </summary>
         [HttpGet("performance-report")]
         [Authorize(Policy = "AdminOnly")]
         public async Task<IActionResult> GetPerformanceReport()
         {
-            var report = await _hospitalService.GetPerformanceReportAsync();
+            var report = await _hospitalService
+                    .GetMyPerformanceReportAsync(CallerHospitalId);
             return Ok(report);
         }
 

@@ -18,6 +18,8 @@ namespace IPTS.Core.Interfaces
         //  performance reports
         Task<PerformanceSummaryDto> GetPerformanceReportAsync();
         Task<List<WeeklyTransferDto>> GetWeeklyTransfersAsync(Guid hospitalId, int weeks);
+        // Add this method alongside the existing GetPerformanceReportAsync
+        Task<HospitalPerformanceReportDto> GetMyPerformanceReportAsync(Guid hospitalId);
 
     }
 }

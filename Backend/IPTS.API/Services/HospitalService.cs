@@ -231,6 +231,32 @@ namespace IPTS.API.Services
             return result;
         }
 
+        public async Task<HospitalPerformanceReportDto> GetMyPerformanceReportAsync(Guid hospitalId)
+        {
+            var hospital = await _db.Hospitals
+                .FirstOrDefaultAsync(h => h.Id == hospitalId && h.IsActive)
+                ?? throw new InvalidOperationException("Hospital not found.");
+
+            var stats = await _db.HospitalPerformanceStats
+                .FirstOrDefaultAsync(s => s.HospitalId == hospitalId);
+
+            double acceptanceRate = stats == null || stats.TotalRequestsReceived == 0 ? 0
+                : (double)stats.TotalAccepted / stats.TotalRequestsReceived * 100;
+
+            return new HospitalPerformanceReportDto(
+                HospitalId: hospital.Id,
+                HospitalName: hospital.Name,
+                TotalTransfersHandled: stats?.TotalTransfersHandled ?? 0,
+                TotalRequestsReceived: stats?.TotalRequestsReceived ?? 0,
+                TotalAccepted: stats?.TotalAccepted ?? 0,
+                TotalDeclined: stats?.TotalDeclined ?? 0,
+                AcceptanceRate: Math.Round(acceptanceRate, 1),
+                AvgResponseTimeMinutes: Math.Round(stats?.AvgResponseTimeMinutes ?? 0, 1),
+                AvgTransferDurationMinutes: Math.Round(stats?.AvgTransferDurationMinutes ?? 0, 1),
+                LastUpdated: stats?.LastUpdated ?? DateTime.UtcNow
+            );
+        }
+
 
         private static HospitalDto MapToDto(Hospital h) => new(
             Id: h.Id, Name: h.Name, Address: h.Address,

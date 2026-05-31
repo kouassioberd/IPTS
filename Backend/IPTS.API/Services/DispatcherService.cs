@@ -24,6 +24,7 @@ namespace IPTS.API.Services
                 .Where(t => t.SendingHospitalId == hospitalId)
                 .Include(t => t.ReceivingHospital)
                 .Include(t => t.AssignedAmbulance)
+                .Include(t => t.TrackingToken)
                 .OrderByDescending(t => t.ConfirmedAt)
                 .ToListAsync();
 
@@ -227,7 +228,8 @@ namespace IPTS.API.Services
             PatientDataSubmitted: t.PatientRecord is not null,
             AssignedAmbulanceId: t.AssignedAmbulanceId,
             AssignedAmbulanceUnit: t.AssignedAmbulance?.UnitNumber,
-            AmbulanceStatus: t.AssignedAmbulance?.Status
+            AmbulanceStatus: t.AssignedAmbulance?.Status,
+            TrackingToken: t.TrackingToken?.Token
         );
     }
 }

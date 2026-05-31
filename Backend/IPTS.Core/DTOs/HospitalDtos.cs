@@ -149,4 +149,31 @@ namespace IPTS.Core.DTOs
         string NewPassword
     );
 
+    // ──Performance reporting DTOs ──────────────────────────
+    public record HospitalPerformanceReportDto(
+        Guid HospitalId,
+        string HospitalName,
+        int TotalTransfersHandled,
+        int TotalRequestsReceived,
+        int TotalAccepted,
+        int TotalDeclined,
+        double AcceptanceRate,           // TotalAccepted / TotalRequestsReceived * 100
+        double AvgResponseTimeMinutes,
+        double AvgTransferDurationMinutes,
+        DateTime LastUpdated
+    );
+
+    public record PerformanceSummaryDto(
+        int TotalHospitals,
+        int TotalTransfersAllTime,
+        double SystemWideAcceptanceRate,
+        double SystemWideAvgResponseMinutes,
+        List<HospitalPerformanceReportDto> Hospitals
+    );
+
+    public record WeeklyTransferDto(
+        string WeekLabel,                 // e.g. "2026-W20"
+        DateTime WeekStart,
+        int TransferCount
+    );
 }

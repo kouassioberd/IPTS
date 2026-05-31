@@ -15,5 +15,11 @@ namespace IPTS.Core.Interfaces
         Task<HospitalDto?> UpdateAsync(Guid id, UpdateHospitalRequest request);
         Task<bool> DeactivateAsync(Guid id);
         Task<HospitalDashboardDto?> GetDashboardAsync(Guid hospitalId);
+        //  performance reports
+        Task<PerformanceSummaryDto> GetPerformanceReportAsync();
+        Task<List<WeeklyTransferDto>> GetWeeklyTransfersAsync(Guid hospitalId, int weeks);
+        // Add this method alongside the existing GetPerformanceReportAsync
+        Task<HospitalPerformanceReportDto> GetMyPerformanceReportAsync(Guid hospitalId);
+
     }
 }

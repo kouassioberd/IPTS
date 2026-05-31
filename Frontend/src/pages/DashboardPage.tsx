@@ -3,12 +3,23 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     hospitalsApi, wardsApi, bedsApi, staffApi,
-    clearAuth, getUser,
+    clearAuth, getUser, performanceApi,
 } from "../services/api";
 import type {
     HospitalDashboardDto, WardDetailDto,
-    StaffDto, CreateStaffRequest, CreateWardRequest,
+    StaffDto, CreateStaffRequest, CreateWardRequest, HospitalPerformanceReportDto, WeeklyTransferDto,
 } from "../services/api";
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 // ── CONSTANTS ─────────────────────────────────────────────────────
 const WARD_TYPES = ["ICU", "ER", "General", "Surgery", "Pediatric", "Cardiology"];
@@ -19,7 +30,7 @@ const BED_COLORS: Record<number, string> = {
 };
 const AMB_STATUSES = ["Available", "Assigned", "In Transit", "Maintenance"];
 
-type ActiveTab = "beds" | "staff" | "ambulances";
+type ActiveTab = "beds" | "staff" | "ambulances" | "reports";
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
@@ -40,6 +51,10 @@ export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<ActiveTab>("beds");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [reportData, setReportData] = useState<HospitalPerformanceReportDto | null>(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
+    const [weeklyData, setWeeklyData] = useState<WeeklyTransferDto[]>([]);
 
     // Modal states
     const [showAddWard, setShowAddWard] = useState(false);
@@ -48,7 +63,15 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!user) { navigate("/login"); return; }
         loadAll();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (selectedHospitalId) {
+            loadWeeklyData(selectedHospitalId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedHospitalId]);
 
     const loadAll = async () => {
         try {
@@ -95,6 +118,33 @@ export default function DashboardPage() {
         }
     };
 
+    const loadReportData = async () => {
+        setReportLoading(true);
+        try {
+            const report = await performanceApi.getReport();
+            setReportData(report);
+            // Load weekly data for this hospital
+            if (!selectedHospitalId && user?.hospitalId) {
+                setSelectedHospitalId(user.hospitalId);
+                const weekly = await performanceApi.getWeeklyTransfers(user.hospitalId, 8);
+                setWeeklyData(weekly);
+            }
+        } catch (e: unknown) {
+            setError(getErrorMessage(e));
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    const loadWeeklyData = async (hospitalId: string) => {
+        try {
+            const data = await performanceApi.getWeeklyTransfers(hospitalId, 8);
+            setWeeklyData(data);
+        } catch {
+            setWeeklyData([]);
+        }
+    };
+
     const handleDeactivateStaff = async (id: string) => {
         if (!confirm("Deactivate this staff member?")) return;
         try {
@@ -130,6 +180,9 @@ export default function DashboardPage() {
 
     const occupancyPct = dashboard.totalBeds > 0
         ? Math.round((dashboard.occupiedBeds / dashboard.totalBeds) * 100) : 0;
+
+    // safe local reference for rendering (avoids multiple ?. checks inline)
+    const perf = reportData;
 
     return (
         <div style={{ minHeight: "100vh", background: "#0A1628", fontFamily: "'Inter', sans-serif" }}>
@@ -240,6 +293,19 @@ export default function DashboardPage() {
                             textTransform: "capitalize",
                         }}>{tab === "beds" ? "🛏 Wards & Beds" : tab === "staff" ? "👥 Staff" : "🚑 Ambulances"}</button>
                     ))}
+                    <button
+                        onClick={() => {
+                            setActiveTab("reports");
+                            if (!reportData) loadReportData();
+                        }}
+                        style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            padding: "10px 20px", fontSize: 14, fontWeight: 500,
+                            color: activeTab === "reports" ? "#00C2D4" : "#8BA3C7",
+                            borderBottom: activeTab === "reports" ? "2px solid #00C2D4" : "2px solid transparent",
+                        }}>
+                        📊 Reports
+                    </button>
                 </div>
 
                 {/* ── BEDS TAB ── */}
@@ -373,6 +439,26 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 )}
+
+                {/* MY HOSPITAL PERFORMANCE CARDS */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+                    {[
+                        { label: "Transfers Handled", value: perf ? perf.totalTransfersHandled : "-", color: "#00D68F" },
+                        { label: "Requests Received", value: perf ? perf.totalRequestsReceived : "-", color: "#7EB9FF" },
+                        { label: "Acceptance Rate", value: perf ? `${perf.acceptanceRate}%` : "-", color: "#00C2D4" },
+                        { label: "Avg Response Time", value: perf ? `${perf.avgResponseTimeMinutes} min` : "-", color: "#FF9A3C" },
+                    ].map(card => (
+                        <div key={card.label} style={{
+                            background: "#112240",
+                            border: "1px solid rgba(255,255,255,0.07)",
+                            borderRadius: 12, padding: 20,
+                        }}>
+                            <div style={{ color: card.color, fontSize: 28, fontWeight: 700 }}>{card.value}</div>
+                            <div style={{ color: "#8BA3C7", fontSize: 12, marginTop: 6 }}>{card.label}</div>
+                        </div>
+                    ))}
+                </div>
+
             </div>
 
             {/* ── ADD WARD MODAL ── */}
@@ -516,8 +602,12 @@ function AddWardModal({ onClose, onSubmit }: {
         <Modal title="Add New Ward" onClose={onClose}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <Field label="Ward Name">
-                    <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                        placeholder="e.g. ICU Ward B" style={inputStyle} />
+                    <input
+                        value={form.name}
+                        onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                        placeholder="e.g. ICU Ward B"
+                        style={inputStyle}
+                    />
                 </Field>
                 <Field label="Ward Type">
                     <select value={form.type} onChange={e => setForm(p => ({ ...p, type: Number(e.target.value) }))} style={inputStyle}>

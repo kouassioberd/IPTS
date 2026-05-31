@@ -75,6 +75,19 @@ export const hospitalsApi = {
     deactivate: (id: string) => apiFetch(`/Hospitals/${id}`, { method: "DELETE" }),
 };
 
+// ── PERFORMANCE REPORTS (Admin Only)─────────────────────
+export const performanceApi = {
+    // Returns system-wide summary + per-hospital stats
+    getReport: () =>
+        apiFetch<HospitalPerformanceReportDto>("/Hospitals/performance-report"),
+
+    // Returns week-by-week delivered transfer counts for one hospital
+    getWeeklyTransfers: (hospitalId: string, weeks = 8) =>
+        apiFetch<WeeklyTransferDto[]>(
+            `/Hospitals/${hospitalId}/weekly-transfers?weeks=${weeks}`
+        ),
+}
+
 // ── WARDS ─────────────────────────────────────────────────────────
 
 export const wardsApi = {
@@ -597,6 +610,7 @@ export interface DispatcherTransferDto {
     assignedAmbulanceId: string | null;
     assignedAmbulanceUnit: string | null;
     ambulanceStatus: number | null;
+    trackingToken: string | null;
 }
 
 export interface DispatcherDashboardDto {
@@ -626,6 +640,35 @@ export const familyApi = {
     track: (token: string) =>
         apiFetch<FamilyTrackingDto>(`/family/${token}`),
 };
+
+// ──Performance report types ────────────────────────────
+export interface HospitalPerformanceReportDto {
+    hospitalId: string;
+    hospitalName: string;
+    totalTransfersHandled: number;
+    totalRequestsReceived: number;
+    totalAccepted: number;
+    totalDeclined: number;
+    acceptanceRate: number;   // 0-100
+    avgResponseTimeMinutes: number;
+    avgTransferDurationMinutes: number;
+    lastUpdated: string;
+}
+
+export interface PerformanceSummaryDto {
+    totalHospitals: number;
+    totalTransfersAllTime: number;
+    systemWideAcceptanceRate: number;
+    systemWideAvgResponseMinutes: number;
+    hospitals: HospitalPerformanceReportDto[];
+}
+
+export interface WeeklyTransferDto {
+    weekLabel: string;   // e.g. '2026-W20'
+    weekStart: string;
+    transferCount: number;
+}
+
 
 
 

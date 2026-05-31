@@ -34,6 +34,7 @@ export default function DispatcherDashboardPage() {
     // Which transfer is expanded for assign/update actions
     const [expanded, setExpanded] = useState<string | null>(null);
     const [selectedAmb, setSelectedAmb] = useState<string>("");
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (!user) { navigate("/login"); return; }
@@ -49,7 +50,7 @@ export default function DispatcherDashboardPage() {
             ]);
             setDashboard(dash);
             setAmbulances(ambs);
-        } catch (e) { setError(getErrorMessage(e)); }
+        } catch (e: unknown) { setError(getErrorMessage(e)); }
         finally { setLoading(false); }
     };
 
@@ -65,7 +66,7 @@ export default function DispatcherDashboardPage() {
             setExpanded(null);
             setSelectedAmb("");
             await loadData();
-        } catch (e) { setError(getErrorMessage(e)); }
+        } catch (e: unknown) { setError(getErrorMessage(e)); }
         finally { setAssigning(null); }
     };
 
@@ -194,6 +195,11 @@ export default function DispatcherDashboardPage() {
                                     onSelectAmb={setSelectedAmb}
                                     onAssign={() => handleAssign(t.id)}
                                     assigning={assigning === t.id}
+                                    copied={copied}
+                                    onCopy={() => {
+                                        setCopied(true);
+                                        setTimeout(() => setCopied(false), 2000);
+                                    }}
                                 />
                             ))}
                         </div>
@@ -206,7 +212,7 @@ export default function DispatcherDashboardPage() {
 
 //The TransferCard sub - component :
 function TransferCard({ transfer, ambulances, expanded, onToggle,
-    selectedAmb, onSelectAmb, onAssign, assigning,
+    selectedAmb, onSelectAmb, onAssign, assigning, copied, onCopy,
 }: {
     transfer: DispatcherTransferDto;
     ambulances: AmbulanceDetailDto[];
@@ -216,6 +222,8 @@ function TransferCard({ transfer, ambulances, expanded, onToggle,
     onSelectAmb: (id: string) => void;
     onAssign: () => void;
     assigning: boolean;
+    copied: boolean;
+    onCopy: () => void;
 }) {
     const statusColor = TRANSFER_STATUS_COLORS[transfer.status] ?? "#8BA3C7";
     const statusLabel = TRANSFER_STATUS_LABELS[transfer.status] ?? "Unknown";
@@ -350,6 +358,53 @@ function TransferCard({ transfer, ambulances, expanded, onToggle,
                     )}
                 </div>
             )}
+
+            {/* ── FAMILY TRACKING LINK ─────────────────── */}
+            {transfer.trackingToken && (
+                <div style={{
+                    background: "rgba(0,194,212,0.07)",
+                    border: "1px solid rgba(0,194,212,0.25)",
+                    borderRadius: 12, padding: "16px 20px",
+                    marginTop: 12,
+                }}>
+                    <p style={{
+                        color: "#00C2D4", fontWeight: 700,
+                        fontSize: 13, margin: "0 0 6px",
+                    }}>
+                        📍 Family Tracking Link
+                    </p>
+                    <p style={{ color: "#8BA3C7", fontSize: 12, margin: "0 0 10px" }}>
+                        Copy and send this link via SMS or email to the patient's family.
+                    </p>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <code style={{
+                            flex: 1, background: "#0A1628", color: "#F0F6FF",
+                            padding: "6px 10px", borderRadius: 6,
+                            fontSize: 11, wordBreak: "break-all",
+                        }}>
+                            {`${window.location.origin}/track/${transfer.trackingToken}`}
+                        </code>
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(
+                                    `${window.location.origin}/track/${transfer.trackingToken}`
+                                );
+                                onCopy();
+                            }}
+                            style={{
+                                background: copied ? "#00D68F" : "#00C2D4",
+                                color: "#0A1628", border: "none",
+                                borderRadius: 8, padding: "6px 14px",
+                                fontWeight: 700, cursor: "pointer",
+                                whiteSpace: "nowrap", fontSize: 12,
+                            }}
+                        >
+                            {copied ? "✓ Copied!" : "Copy Link"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

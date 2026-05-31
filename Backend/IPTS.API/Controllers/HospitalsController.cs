@@ -91,5 +91,30 @@ namespace IPTS.API.Controllers
 
             return NoContent();
         }
+
+        /// <summary>
+        /// Admin-only: returns performance stats for only the caller's hospital.
+        /// Used by the Admin dashboard Reports tab.
+        /// </summary>
+        [HttpGet("performance-report")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetPerformanceReport()
+        {
+            var report = await _hospitalService
+                    .GetMyPerformanceReportAsync(CallerHospitalId);
+            return Ok(report);
+        }
+
+        /// <summary>
+        /// Admin-only: returns week-by-week delivered transfer counts for one hospital.
+        /// Used to render the weekly transfers bar chart.
+        /// </summary>
+        [HttpGet("{id:guid}/weekly-transfers")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetWeeklyTransfers(Guid id, [FromQuery] int weeks = 8)
+        {
+            var data = await _hospitalService.GetWeeklyTransfersAsync(id, weeks);
+            return Ok(data);
+        }
     }
 }

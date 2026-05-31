@@ -144,6 +144,120 @@ namespace IPTS.API.Services
             );
         }
 
+        // ── PERFORMANCE REPORT ──────────────────────────────
+        public async Task<PerformanceSummaryDto> GetPerformanceReportAsync()
+        {
+            // Load hospitals and their stats separately then join in memory
+            var allStats = await _db.HospitalPerformanceStats.ToListAsync();
+            var hospitalList = await _db.Hospitals.Where(h => h.IsActive).ToListAsync();
+            var report = hospitalList.Select(h => {
+                var stats = allStats.FirstOrDefault(s => s.HospitalId == h.Id);
+                double acceptanceRate = stats == null || stats.TotalRequestsReceived == 0 ? 0
+                : (double)stats.TotalAccepted / stats.TotalRequestsReceived * 100;
+                return new HospitalPerformanceReportDto(
+                HospitalId: h.Id,
+                HospitalName: h.Name,
+                TotalTransfersHandled: stats?.TotalTransfersHandled ?? 0,
+                TotalRequestsReceived: stats?.TotalRequestsReceived ?? 0,
+                TotalAccepted: stats?.TotalAccepted ?? 0,
+                TotalDeclined: stats?.TotalDeclined ?? 0,
+                AcceptanceRate: Math.Round(acceptanceRate, 1),
+                AvgResponseTimeMinutes: Math.Round(stats?.AvgResponseTimeMinutes ?? 0, 1),
+                AvgTransferDurationMinutes: Math.Round(stats?.AvgTransferDurationMinutes ?? 0, 1),
+                LastUpdated: stats?.LastUpdated ?? DateTime.UtcNow
+                );
+            }).ToList();
+            int totalTransfers = report.Sum(r => r.TotalTransfersHandled);
+            int totalReceived = report.Sum(r => r.TotalRequestsReceived);
+            int totalAccepted = report.Sum(r => r.TotalAccepted);
+            double sysAcceptance = totalReceived == 0 ? 0
+            : Math.Round((double)totalAccepted / totalReceived * 100, 1);
+            double sysAvgResponse = report.Count == 0 ? 0
+            : Math.Round(report.Average(r => r.AvgResponseTimeMinutes), 1);
+            return new PerformanceSummaryDto(
+                TotalHospitals: report.Count,
+                TotalTransfersAllTime: totalTransfers,
+                SystemWideAcceptanceRate: sysAcceptance,
+                SystemWideAvgResponseMinutes: sysAvgResponse,
+                Hospitals: report
+            );
+        }
+
+        // ── WEEKLY TRANSFERS────────────────────────────────
+        public async Task<List<WeeklyTransferDto>> GetWeeklyTransfersAsync(
+            Guid hospitalId, int weeks = 8)
+        {
+            // Get all delivered transfers for this hospital in the last N weeks
+            var cutoff = DateTime.UtcNow.AddDays(-(weeks * 7));
+            var transfers = await _db.TransferRequests
+            .Where(t => t.SendingHospitalId == hospitalId
+            && t.Status == TransferStatus.Delivered
+            && t.DeliveredAt.HasValue
+            && t.DeliveredAt >= cutoff)
+            .ToListAsync();
+            // Group by ISO week
+            var grouped = transfers
+            .GroupBy(t => {
+                var d = t.DeliveredAt!.Value;
+                // ISO week calculation
+                int week = System.Globalization.ISOWeek.GetWeekOfYear(d);
+                int year = d.Year;
+                // Handle week 1 of next year
+                if (d.Month == 12 && week == 1) year++;
+                return (year, week);
+            })
+            .OrderBy(g => g.Key.year).ThenBy(g => g.Key.week)
+            .Select(g => new WeeklyTransferDto(
+            WeekLabel: $"{g.Key.year}-W{g.Key.week:D2}",
+            WeekStart: System.Globalization.ISOWeek.ToDateTime(g.Key.year, g.Key.week, DayOfWeek.Monday),
+            TransferCount: g.Count()
+            ))
+            .ToList();
+            // Fill in missing weeks with 0
+            var result = new List<WeeklyTransferDto>();
+            for (int i = weeks - 1; i >= 0; i--)
+            {
+                var weekStart = DateTime.UtcNow.AddDays(-(i * 7)).Date;
+                // Find the Monday of this week
+                int diff = (7 + (weekStart.DayOfWeek - DayOfWeek.Monday)) % 7;
+                weekStart = weekStart.AddDays(-diff);
+                int wNum = System.Globalization.ISOWeek.GetWeekOfYear(weekStart);
+                int yr = weekStart.Year;
+                if (weekStart.Month == 12 && wNum == 1) yr++;
+                var label = $"{yr}-W{wNum:D2}";
+                var existing = grouped.FirstOrDefault(g => g.WeekLabel == label);
+                result.Add(existing ?? new WeeklyTransferDto(label, weekStart, 0));
+            }
+            return result;
+        }
+
+        public async Task<HospitalPerformanceReportDto> GetMyPerformanceReportAsync(Guid hospitalId)
+        {
+            var hospital = await _db.Hospitals
+                .FirstOrDefaultAsync(h => h.Id == hospitalId && h.IsActive)
+                ?? throw new InvalidOperationException("Hospital not found.");
+
+            var stats = await _db.HospitalPerformanceStats
+                .FirstOrDefaultAsync(s => s.HospitalId == hospitalId);
+
+            double acceptanceRate = stats == null || stats.TotalRequestsReceived == 0 ? 0
+                : (double)stats.TotalAccepted / stats.TotalRequestsReceived * 100;
+
+            return new HospitalPerformanceReportDto(
+                HospitalId: hospital.Id,
+                HospitalName: hospital.Name,
+                TotalTransfersHandled: stats?.TotalTransfersHandled ?? 0,
+                TotalRequestsReceived: stats?.TotalRequestsReceived ?? 0,
+                TotalAccepted: stats?.TotalAccepted ?? 0,
+                TotalDeclined: stats?.TotalDeclined ?? 0,
+                AcceptanceRate: Math.Round(acceptanceRate, 1),
+                AvgResponseTimeMinutes: Math.Round(stats?.AvgResponseTimeMinutes ?? 0, 1),
+                AvgTransferDurationMinutes: Math.Round(stats?.AvgTransferDurationMinutes ?? 0, 1),
+                LastUpdated: stats?.LastUpdated ?? DateTime.UtcNow
+            );
+        }
+
+
         private static HospitalDto MapToDto(Hospital h) => new(
             Id: h.Id, Name: h.Name, Address: h.Address,
             Latitude: h.Latitude, Longitude: h.Longitude,

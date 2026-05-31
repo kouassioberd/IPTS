@@ -24,7 +24,7 @@ export default function TransferConfirmPage() {
     const [loading, setLoading] = useState(true);
     const [revealing, setRevealing] = useState(false);
     const [error, setError] = useState("");
-    const [copied, setCopied] = useState(false);
+    
     const [vitals, setVitals] = useState<VitalsRecordDto[]>([]);
 
     useEffect(() => {
@@ -157,66 +157,7 @@ export default function TransferConfirmPage() {
                             </span>
                         </div>
 
-                        {/* ── FAMILY TRACKING LINK ──────────────────── */}
-                        {transfer.trackingToken && !isReceivingHospital && (
-                            <div style={{
-                                marginTop: 20,
-                                background: "rgba(0,194,212,0.07)",
-                                border: "1px solid rgba(0,194,212,0.25)",
-                                borderRadius: 12,
-                                padding: "20px 24px",
-                            }}>
-                                <p style={{
-                                    color: "#00C2D4", fontWeight: 700,
-                                    fontSize: 15, margin: "0 0 6px",
-                                }}>
-                                    📍 Family Tracking Link
-                                </p>
-                                <p style={{
-                                    color: "#8BA3C7", fontSize: 13,
-                                    margin: "0 0 14px",
-                                }}>
-                                    Share this link with the patient's family so they can
-                                    follow the ambulance in real time. Expires in 12 hours.
-                                </p>
-                                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                                    <code style={{
-                                        flex: 1,
-                                        background: "#0A1628",
-                                        color: "#F0F6FF",
-                                        padding: "8px 12px",
-                                        borderRadius: 6,
-                                        fontSize: 12,
-                                        wordBreak: "break-all",
-                                    }}>
-                                        {`${window.location.origin}/track/${transfer.trackingToken}`}
-                                    </code>
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(
-                                                `${window.location.origin}/track/${transfer.trackingToken}`
-                                            );
-                                            setCopied(true);
-                                            setTimeout(() => setCopied(false), 2000);
-                                        }}
-                                        style={{
-                                            background: copied ? "#00D68F" : "#00C2D4",
-                                            color: "#0A1628",
-                                            border: "none",
-                                            borderRadius: 8,
-                                            padding: "8px 18px",
-                                            fontWeight: 700,
-                                            cursor: "pointer",
-                                            whiteSpace: "nowrap",
-                                            fontSize: 13,
-                                            transition: "background 0.2s",
-                                        }}
-                                    >
-                                        {copied ? "✓ Copied!" : "Copy Link"}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        
 
                         {/* Receiving hospital: Reveal Patient Data button */}
                         {!patientData && transfer.patientDataSubmitted && isReceivingHospital && (

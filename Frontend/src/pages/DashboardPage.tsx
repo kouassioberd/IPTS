@@ -10,9 +10,17 @@ import type {
     StaffDto, CreateStaffRequest, CreateWardRequest, PerformanceSummaryDto, WeeklyTransferDto,
 } from "../services/api";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    Tooltip, ResponsiveContainer, Cell,
-} from 'recharts';
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 // ── CONSTANTS ─────────────────────────────────────────────────────
 const WARD_TYPES = ["ICU", "ER", "General", "Surgery", "Pediatric", "Cardiology"];
@@ -492,22 +500,48 @@ export default function DashboardPage() {
                                             No broadcast data yet. Rates will appear after hospitals respond to transfers.
                                         </div>
                                     ) : (
-                                        <ResponsiveContainer width="100%" height={220}>
-                                            <BarChart data={reportData.hospitals} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                                <XAxis dataKey="hospitalName" tick={{ fill: "#8BA3C7", fontSize: 11 }} />
-                                                <YAxis domain={[0, 100]} tick={{ fill: "#8BA3C7", fontSize: 11 }} />
-                                                <Tooltip
-                                                    contentStyle={{ background: "#112240", border: "1px solid #1E5FBF", color: "#F0F6FF", fontSize: 12 }}
-                                                    formatter={(v: number) => [`${v}%`, "Acceptance Rate"]}
-                                                />
-                                                <Bar dataKey="acceptanceRate" radius={[4, 4, 0, 0]}>
-                                                    {reportData.hospitals.map((_, i) => (
-                                                        <Cell key={i} fill={i % 2 === 0 ? "#00C2D4" : "#1E5FBF"} />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                                                <div style={{ height: 220 }}>
+                                                    <Bar
+                                                        data={{
+                                                            labels: reportData.hospitals.map(h => h.hospitalName),
+                                                            datasets: [{
+                                                                label: 'Acceptance Rate (%)',
+                                                                data: reportData.hospitals.map(h => h.acceptanceRate),
+                                                                backgroundColor: reportData.hospitals.map((_, i) =>
+                                                                    i % 2 === 0 ? '#00C2D4' : '#1E5FBF'),
+                                                                borderRadius: 4,
+                                                            }]
+                                                        }}
+                                                        options={{
+                                                            responsive: true,
+                                                            maintainAspectRatio: false,
+                                                            scales: {
+                                                                y: {
+                                                                    max: 100,
+                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
+                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                                                },
+                                                                x: {
+                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
+                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                                                }
+                                                            },
+                                                            plugins: {
+                                                                legend: { display: false },
+                                                                tooltip: {
+                                                                    backgroundColor: '#112240',
+                                                                    borderColor: '#1E5FBF',
+                                                                    borderWidth: 1,
+                                                                    titleColor: '#F0F6FF',
+                                                                    bodyColor: '#8BA3C7',
+                                                                    callbacks: {
+                                                                        label: (ctx) => `${ctx.raw}%`
+                                                                    }
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
                                     )}
                                 </div>
 
@@ -521,22 +555,47 @@ export default function DashboardPage() {
                                             No response time data yet. Times are recorded when hospitals accept broadcasts.
                                         </div>
                                     ) : (
-                                        <ResponsiveContainer width="100%" height={220}>
-                                            <BarChart data={reportData.hospitals} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                                <XAxis dataKey="hospitalName" tick={{ fill: "#8BA3C7", fontSize: 11 }} />
-                                                <YAxis tick={{ fill: "#8BA3C7", fontSize: 11 }} />
-                                                <Tooltip
-                                                    contentStyle={{ background: "#112240", border: "1px solid #1E5FBF", color: "#F0F6FF", fontSize: 12 }}
-                                                    formatter={(v: number) => [`${v} min`, "Avg Response Time"]}
-                                                />
-                                                <Bar dataKey="avgResponseTimeMinutes" radius={[4, 4, 0, 0]}>
-                                                    {reportData.hospitals.map((_, i) => (
-                                                        <Cell key={i} fill={i % 2 === 0 ? "#FF9A3C" : "#E67E22"} />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                                                <div style={{ height: 220 }}>
+                                                    <Bar
+                                                        data={{
+                                                            labels: reportData.hospitals.map(h => h.hospitalName),
+                                                            datasets: [{
+                                                                label: 'Avg Response Time (min)',
+                                                                data: reportData.hospitals.map(h => h.avgResponseTimeMinutes),
+                                                                backgroundColor: reportData.hospitals.map((_, i) =>
+                                                                    i % 2 === 0 ? '#FF9A3C' : '#E67E22'),
+                                                                borderRadius: 4,
+                                                            }]
+                                                        }}
+                                                        options={{
+                                                            responsive: true,
+                                                            maintainAspectRatio: false,
+                                                            scales: {
+                                                                y: {
+                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
+                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                                                },
+                                                                x: {
+                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
+                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                                                }
+                                                            },
+                                                            plugins: {
+                                                                legend: { display: false },
+                                                                tooltip: {
+                                                                    backgroundColor: '#112240',
+                                                                    borderColor: '#1E5FBF',
+                                                                    borderWidth: 1,
+                                                                    titleColor: '#F0F6FF',
+                                                                    bodyColor: '#8BA3C7',
+                                                                    callbacks: {
+                                                                        label: (ctx) => `${ctx.raw} min`
+                                                                    }
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
                                     )}
                                 </div>
 
@@ -570,18 +629,50 @@ export default function DashboardPage() {
                                             No delivered transfers yet for this hospital.
                                         </div>
                                     ) : (
-                                        <ResponsiveContainer width="100%" height={220}>
-                                            <BarChart data={weeklyData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                                <XAxis dataKey="weekLabel" tick={{ fill: "#8BA3C7", fontSize: 11 }} />
-                                                <YAxis allowDecimals={false} tick={{ fill: "#8BA3C7", fontSize: 11 }} />
-                                                <Tooltip
-                                                    contentStyle={{ background: "#112240", border: "1px solid #1E5FBF", color: "#F0F6FF", fontSize: 12 }}
-                                                    formatter={(v: number) => [v, "Transfers"]}
-                                                />
-                                                <Bar dataKey="transferCount" fill="#00D68F" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                                                <div style={{ height: 220 }}>
+                                                    <Bar
+                                                        data={{
+                                                            labels: weeklyData.map(w => w.weekLabel),
+                                                            datasets: [{
+                                                                label: 'Transfers',
+                                                                data: weeklyData.map(w => w.transferCount),
+                                                                backgroundColor: '#00D68F',
+                                                                borderRadius: 4,
+                                                            }]
+                                                        }}
+                                                        options={{
+                                                            responsive: true,
+                                                            maintainAspectRatio: false,
+                                                            scales: {
+                                                                y: {
+                                                                    ticks: {
+                                                                        color: '#8BA3C7',
+                                                                        font: { size: 11 },
+                                                                        stepSize: 1,
+                                                                    },
+                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                                                },
+                                                                x: {
+                                                                    ticks: { color: '#8BA3C7', font: { size: 11 } },
+                                                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                                                }
+                                                            },
+                                                            plugins: {
+                                                                legend: { display: false },
+                                                                tooltip: {
+                                                                    backgroundColor: '#112240',
+                                                                    borderColor: '#1E5FBF',
+                                                                    borderWidth: 1,
+                                                                    titleColor: '#F0F6FF',
+                                                                    bodyColor: '#8BA3C7',
+                                                                    callbacks: {
+                                                                        label: (ctx) => `${ctx.raw} transfers`
+                                                                    }
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
                                     )}
                                 </div>
 

@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { familyApi } from "../services/api";
 import type { FamilyTrackingDto } from "../services/api";
 
@@ -13,15 +15,23 @@ function timeAgo(dateStr: string): string {
     return `${Math.floor(seconds / 3600)} hours ago`;
 }
 
-// ── HELPER: builds the OpenStreetMap embed URL ──────────────────────
-function buildMapUrl(lat: number, lng: number): string {
-    const margin = 0.02;
-    return [
-        "https://www.openstreetmap.org/export/embed.html",
-        `?bbox=${lng - margin},${lat - margin},${lng + margin},${lat + margin}`,
-        "&layer=mapnik",
-        `&marker=${lat},${lng}`,
-    ].join("");
+const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
+
+// ── HELPER: prefer English map labels when the vector tile provides them ──
+function preferEnglishLabels(map: maplibregl.Map) {
+    const style = map.getStyle();
+
+    style.layers
+        ?.filter((layer) => layer.type === "symbol" && layer.layout?.["text-field"])
+        .forEach((layer) => {
+            map.setLayoutProperty(layer.id, "text-field", [
+                "coalesce",
+                ["get", "name:en"],
+                ["get", "name_en"],
+                ["get", "name:latin"],
+                ["get", "name"],
+            ]);
+        });
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────
@@ -101,7 +111,6 @@ export default function FamilyTrackingPage() {
     if (!data) return null;
 
     const trackingUrl = window.location.href;
-    const mapUrl = buildMapUrl(data.ambulanceLatitude, data.ambulanceLongitude);
 
     // ── MAIN TRACKING VIEW ────────────────────────────────────────────
     return (
@@ -213,13 +222,10 @@ export default function FamilyTrackingPage() {
                     }}>
                         🗺️  Ambulance Location
                     </div>
-                    <iframe
-                        src={mapUrl}
-                        width="100%"
-                        height="380"
-                        style={{ border: "none", display: "block" }}
-                        title="Ambulance location map"
-                        loading="lazy"
+                    <LiveAmbulanceMap
+                        latitude={data.ambulanceLatitude}
+                        longitude={data.ambulanceLongitude}
+                        ambulanceUnit={data.ambulanceUnit}
                     />
                 </div>
 
@@ -271,6 +277,97 @@ export default function FamilyTrackingPage() {
 
             </div>
         </div>
+    );
+}
+
+// ── LIVE MAP COMPONENT ───────────────────────────────────────────────────
+function LiveAmbulanceMap({
+    latitude,
+    longitude,
+    ambulanceUnit,
+}: {
+    latitude: number;
+    longitude: number;
+    ambulanceUnit: string;
+}) {
+    const mapContainerRef = useRef<HTMLDivElement | null>(null);
+    const mapRef = useRef<maplibregl.Map | null>(null);
+    const markerRef = useRef<maplibregl.Marker | null>(null);
+
+    useEffect(() => {
+        if (!mapContainerRef.current || mapRef.current) return;
+
+        const markerElement = document.createElement("div");
+        markerElement.style.width = "42px";
+        markerElement.style.height = "42px";
+        markerElement.style.borderRadius = "50%";
+        markerElement.style.background = "#00D68F";
+        markerElement.style.border = "3px solid #FFFFFF";
+        markerElement.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.35)";
+        markerElement.style.display = "flex";
+        markerElement.style.alignItems = "center";
+        markerElement.style.justifyContent = "center";
+        markerElement.style.fontSize = "22px";
+        markerElement.style.cursor = "pointer";
+        markerElement.textContent = "🚑";
+
+        const map = new maplibregl.Map({
+            container: mapContainerRef.current,
+            style: MAP_STYLE_URL,
+            center: [longitude, latitude],
+            zoom: 15,
+            attributionControl: false,
+        });
+
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+        map.addControl(
+            new maplibregl.AttributionControl({
+                compact: true,
+                customAttribution:
+                    '<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a>',
+            }),
+            "bottom-right"
+        );
+
+        map.on("load", () => preferEnglishLabels(map));
+
+        const marker = new maplibregl.Marker({ element: markerElement, anchor: "center" })
+            .setLngLat([longitude, latitude])
+            .setPopup(
+                new maplibregl.Popup({ offset: 24 }).setHTML(
+                    `<strong>${ambulanceUnit || "Ambulance"}</strong><br/>Live ambulance location`
+                )
+            )
+            .addTo(map);
+
+        mapRef.current = map;
+        markerRef.current = marker;
+
+        return () => {
+            marker.remove();
+            map.remove();
+            mapRef.current = null;
+            markerRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        const nextPosition: [number, number] = [longitude, latitude];
+        markerRef.current?.setLngLat(nextPosition);
+        mapRef.current?.easeTo({
+            center: nextPosition,
+            duration: 900,
+        });
+    }, [latitude, longitude]);
+
+    return (
+        <div
+            ref={mapContainerRef}
+            style={{
+                width: "100%",
+                height: 380,
+            }}
+        />
     );
 }
 

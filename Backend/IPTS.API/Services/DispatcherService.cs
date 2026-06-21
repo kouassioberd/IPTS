@@ -82,6 +82,7 @@ namespace IPTS.API.Services
             var transfer = await _db.TransferRequests
                 .Include(t => t.ReceivingHospital)
                 .Include(t => t.AssignedAmbulance)
+                .Include(t => t.TrackingToken)
                 .FirstOrDefaultAsync(t =>
                     t.Id == request.TransferRequestId &&
                     t.SendingHospitalId == hospitalId)
@@ -161,10 +162,19 @@ namespace IPTS.API.Services
             var previousStatus = transfer.Status;
             transfer.Status = request.NewStatus;
 
-            // On Delivered: free the ambulance + record delivery time
+            // On Delivered: free the ambulance, record delivery time, and shorten family tracking access.
             if (request.NewStatus == TransferStatus.Delivered)
             {
-                transfer.DeliveredAt = DateTime.UtcNow;
+                var deliveredAt = DateTime.UtcNow;
+                transfer.DeliveredAt = deliveredAt;
+
+                if (transfer.TrackingToken is not null)
+                {
+                    var deliveryExpiry = deliveredAt.AddMinutes(10);
+                    if (deliveryExpiry < transfer.TrackingToken.ExpiresAt)
+                        transfer.TrackingToken.ExpiresAt = deliveryExpiry;
+                }
+
                 if (transfer.AssignedAmbulance is not null)
                     transfer.AssignedAmbulance.Status = AmbulanceStatus.Available;
 
